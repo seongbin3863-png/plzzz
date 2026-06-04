@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+/* ════════════════════════════════════════════════════════
+   Bottom Sheet 슬라이드업 애니메이션
+════════════════════════════════════════════════════════ */
+@keyframes bottomSheetUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.bottom-sheet {
+  animation: bottomSheetUp 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+/* ════════════════════════════════════════════════════════
+   모바일 전용 스타일  ·  max-width: 639px
+════════════════════════════════════════════════════════ */
+@media (max-width: 639px) {
+
+  /* 뷰포트 높이: 모바일 브라우저 주소창 제외 */
+  .app-root {
+    height: 100dvh;
+  }
+
+  /* 측면 선수 이미지 숨김 */
+  .player-side-img {
+    display: none;
+  }
+
+  /* 손흥민 이미지 — 130px 헤더 맞춤 */
+  .hero-son-wrapper img {
+    height: 155px !important;
+  }
+
+  /* 로고 텍스트 */
+  .logo-text-span {
+    font-size: 32px !important;
+  }
+
+  /* 브러시 SVG */
+  .logo-brush {
+    width: 150px !important;
+    height: 40px !important;
+  }
+
+  /* 카운트다운 위젯 */
+  .countdown-widget {
+    min-width: 0 !important;
+    padding: 5px 10px !important;
+  }
+
+  /* 지도 영역 — 모바일 엣지-투-엣지 */
+  .main-content-wrap {
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   태블릿 (640px ~ 1023px)
+════════════════════════════════════════════════════════ */
+@media (min-width: 640px) and (max-width: 1023px) {
+
+  .app-root {
+    height: 100dvh;
+  }
+
+  .player-side-img {
+    display: none;
+  }
+
+  .logo-text-span {
+    font-size: 40px !important;
+  }
+
+  .countdown-widget {
+    min-width: 0 !important;
+  }
+
+  /* 태블릿도 모바일 검색바 사용 → 엣지-투-엣지 */
+  .main-content-wrap {
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "월드컵맵",
+  "description": "대형 스크린으로 축구 경기를 중계하는 주변 스포츠펍과 술집을 지도에서 쉽게 찾는 서비스입니다.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,711 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { spots, REGIONS, REGION_CENTERS } from './data/spots';
+import { MapView, type Place } from './components/MapView.tsx';
+import { SearchBar } from './components/SearchBar.tsx';
+import { RegionFilter } from './components/RegionFilter.tsx';
+
+const MATCH_DATE = new Date('2026-06-12T11:00:00+09:00');
+
+function getCountdown() {
+  const diff = MATCH_DATE.getTime() - Date.now();
+  if (diff <= 0) return null;
+  const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  return { days, hours, minutes, seconds };
+}
+
+function TaegukSVG({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 200 200" className={className} aria-hidden="true">
+      <circle cx="100" cy="100" r="88" fill="#0a0a0a" />
+      <path d="M100 12 A88 88 0 0 1 100 188 A44 44 0 0 1 100 100 A44 44 0 0 0 100 12Z" fill="#EF4444" />
+      <circle cx="100" cy="100" r="88" stroke="#EF4444" strokeWidth="3" fill="none" />
+      <circle cx="100" cy="56" r="22" fill="#0a0a0a" />
+      <circle cx="100" cy="144" r="22" fill="#EF4444" />
+    </svg>
+  );
+}
+
+function TigerSVG({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 180 200" className={className} aria-hidden="true">
+      <ellipse cx="90" cy="102" rx="80" ry="86" fill="#991b1b" />
+      <path d="M20 58 L6 14 L54 42Z" fill="#dc2626" /><path d="M160 58 L174 14 L126 42Z" fill="#dc2626" />
+      <path d="M23 54 L12 22 L50 42Z" fill="#3f0505" /><path d="M157 54 L168 22 L130 42Z" fill="#3f0505" />
+      <path d="M88 20 L84 58 L92 58Z" fill="#3f0505" /><path d="M73 26 L69 60 L76 60Z" fill="#3f0505" /><path d="M107 26 L111 60 L104 60Z" fill="#3f0505" />
+      <ellipse cx="60" cy="90" rx="21" ry="17" fill="#1a0505" /><ellipse cx="120" cy="90" rx="21" ry="17" fill="#1a0505" />
+      <ellipse cx="60" cy="90" rx="11" ry="15" fill="#f59e0b" /><ellipse cx="120" cy="90" rx="11" ry="15" fill="#f59e0b" />
+      <ellipse cx="60" cy="90" rx="5" ry="13" fill="#1a0505" /><ellipse cx="120" cy="90" rx="5" ry="13" fill="#1a0505" />
+      <ellipse cx="55" cy="84" rx="3" ry="2" fill="#fef3c7" /><ellipse cx="115" cy="84" rx="3" ry="2" fill="#fef3c7" />
+      <path d="M80 114 L100 114 L90 127Z" fill="#1a0505" />
+      <path d="M3 110 L38 106 L38 116Z" fill="#3f0505" /><path d="M5 124 L40 120 L40 129Z" fill="#3f0505" />
+      <path d="M177 110 L142 106 L142 116Z" fill="#3f0505" /><path d="M175 124 L140 120 L140 129Z" fill="#3f0505" />
+      <ellipse cx="90" cy="130" rx="26" ry="19" fill="#b91c1c" />
+      <path d="M68 132 Q90 148 112 132" stroke="#3f0505" strokeWidth="2.5" fill="none" />
+    </svg>
+  );
+}
+
+// ── Fixture type ──────────────────────────────────────────────────────────
+type Fixture = {
+  date: string; time: string;
+  home: string; away: string;
+  homeFlag: string; awayFlag: string;
+  featured?: boolean;
+};
+
+// ── Fixtures data ──────────────────────────────────────────────────────────
+const FIXTURES: Fixture[] = [
+  { date:"2026-06-12",time:"11:00",home:"대한민국",away:"체코",homeFlag:"kr",awayFlag:"cz",featured:true },
+  { date:"2026-06-13",time:"04:00",home:"캐나다",away:"보스니아 헤르체고비나",homeFlag:"ca",awayFlag:"ba" },
+  { date:"2026-06-13",time:"10:00",home:"미국",away:"파라과이",homeFlag:"us",awayFlag:"py" },
+  { date:"2026-06-14",time:"04:00",home:"카타르",away:"스위스",homeFlag:"qa",awayFlag:"ch" },
+  { date:"2026-06-14",time:"07:00",home:"브라질",away:"모로코",homeFlag:"br",awayFlag:"ma" },
+  { date:"2026-06-14",time:"10:00",home:"아이티",away:"스코틀랜드",homeFlag:"ht",awayFlag:"sc" },
+  { date:"2026-06-14",time:"13:00",home:"호주",away:"튀르키예",homeFlag:"au",awayFlag:"tr" },
+  { date:"2026-06-15",time:"02:00",home:"독일",away:"퀴라소",homeFlag:"de",awayFlag:"cw" },
+  { date:"2026-06-15",time:"05:00",home:"네덜란드",away:"일본",homeFlag:"nl",awayFlag:"jp" },
+  { date:"2026-06-15",time:"08:00",home:"코트디부아르",away:"에콰도르",homeFlag:"ci",awayFlag:"ec" },
+  { date:"2026-06-15",time:"11:00",home:"스웨덴",away:"튀니지",homeFlag:"se",awayFlag:"tn" },
+  { date:"2026-06-16",time:"01:00",home:"스페인",away:"카보베르데",homeFlag:"es",awayFlag:"cv" },
+  { date:"2026-06-16",time:"04:00",home:"벨기에",away:"이집트",homeFlag:"be",awayFlag:"eg" },
+  { date:"2026-06-16",time:"07:00",home:"사우디아라비아",away:"우루과이",homeFlag:"sa",awayFlag:"uy" },
+  { date:"2026-06-16",time:"10:00",home:"이란",away:"뉴질랜드",homeFlag:"ir",awayFlag:"nz" },
+  { date:"2026-06-17",time:"04:00",home:"프랑스",away:"세네갈",homeFlag:"fr",awayFlag:"sn" },
+  { date:"2026-06-17",time:"07:00",home:"이라크",away:"노르웨이",homeFlag:"iq",awayFlag:"no" },
+  { date:"2026-06-17",time:"10:00",home:"아르헨티나",away:"알제리",homeFlag:"ar",awayFlag:"dz" },
+  { date:"2026-06-17",time:"13:00",home:"오스트리아",away:"요르단",homeFlag:"at",awayFlag:"jo" },
+  { date:"2026-06-18",time:"02:00",home:"포르투갈",away:"콩고민주공화국",homeFlag:"pt",awayFlag:"cd" },
+  { date:"2026-06-18",time:"05:00",home:"잉글랜드",away:"크로아티아",homeFlag:"gb",awayFlag:"hr" },
+  { date:"2026-06-18",time:"08:00",home:"가나",away:"파나마",homeFlag:"gh",awayFlag:"pa" },
+  { date:"2026-06-18",time:"11:00",home:"우즈베키스탄",away:"콜롬비아",homeFlag:"uz",awayFlag:"co" },
+  { date:"2026-06-19",time:"01:00",home:"체코",away:"남아프리카공화국",homeFlag:"cz",awayFlag:"za" },
+  { date:"2026-06-19",time:"04:00",home:"스위스",away:"보스니아 헤르체고비나",homeFlag:"ch",awayFlag:"ba" },
+  { date:"2026-06-19",time:"07:00",home:"캐나다",away:"카타르",homeFlag:"ca",awayFlag:"qa" },
+  { date:"2026-06-19",time:"10:00",home:"멕시코",away:"대한민국",homeFlag:"mx",awayFlag:"kr",featured:true },
+  { date:"2026-06-20",time:"04:00",home:"미국",away:"호주",homeFlag:"us",awayFlag:"au" },
+  { date:"2026-06-20",time:"07:00",home:"스코틀랜드",away:"모로코",homeFlag:"sc",awayFlag:"ma" },
+  { date:"2026-06-20",time:"09:30",home:"브라질",away:"아이티",homeFlag:"br",awayFlag:"ht" },
+  { date:"2026-06-20",time:"12:00",home:"튀르키예",away:"파라과이",homeFlag:"tr",awayFlag:"py" },
+  { date:"2026-06-21",time:"02:00",home:"네덜란드",away:"스페인",homeFlag:"nl",awayFlag:"es" },
+  { date:"2026-06-21",time:"05:00",home:"독일",away:"코트디부아르",homeFlag:"de",awayFlag:"ci" },
+  { date:"2026-06-21",time:"09:00",home:"에콰도르",away:"퀴라소",homeFlag:"ec",awayFlag:"cw" },
+  { date:"2026-06-21",time:"13:00",home:"튀니지",away:"일본",homeFlag:"tn",awayFlag:"jp" },
+];
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+const flagEmoji = (code: string) =>
+  code.toUpperCase().split('').map(c =>
+    String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
+  ).join('');
+
+const fmtDate = (d: string) => {
+  const [, m, day] = d.split('-');
+  return `${parseInt(m)}월 ${parseInt(day)}일`;
+};
+
+// ── MatchCard ──────────────────────────────────────────────────────────────
+function MatchCard({ match, selected, onClick }: {
+  match: Fixture; selected: boolean; onClick: () => void;
+}) {
+  const isKorea = !!match.featured;
+  return (
+    <div
+      onClick={onClick}
+      className={[
+        'relative px-3 py-2.5 border-b border-white/8 cursor-pointer select-none',
+        'transition-all duration-150 active:scale-[0.98]',
+        selected
+          ? 'bg-red-800/45'
+          : isKorea
+          ? 'bg-red-950/32 hover:bg-red-900/40'
+          : 'hover:bg-white/[0.06]',
+      ].join(' ')}
+    >
+      {/* Korea inner glow */}
+      {isKorea && (
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ boxShadow: 'inset 0 0 22px rgba(200,0,0,0.30)' }} />
+      )}
+      {/* KOREA badge */}
+      {isKorea && (
+        <span className="absolute top-1.5 right-2 text-[6px] font-black uppercase tracking-widest
+          text-red-400 bg-red-950/70 border border-red-700/50 px-1.5 py-0.5 rounded-sm">
+          KOREA
+        </span>
+      )}
+      {/* Teams */}
+      <div className="flex items-center gap-1">
+        <span className="text-[13px] leading-none shrink-0">{flagEmoji(match.homeFlag)}</span>
+        <span className={`text-[9.5px] font-bold flex-1 min-w-0 truncate
+          ${isKorea ? 'text-white' : 'text-white/82'}`}>
+          {match.home}
+        </span>
+        <span className="text-[7px] font-black text-white/25 shrink-0 px-0.5">VS</span>
+        <span className={`text-[9.5px] font-bold flex-1 min-w-0 truncate text-right
+          ${isKorea ? 'text-white' : 'text-white/82'}`}>
+          {match.away}
+        </span>
+        <span className="text-[13px] leading-none shrink-0">{flagEmoji(match.awayFlag)}</span>
+      </div>
+      {/* Date & time */}
+      <div className="flex items-center justify-between mt-1.5">
+        <span className="text-[8px] text-white/35">{fmtDate(match.date)}</span>
+        <span className={`text-[8.5px] font-bold tabular-nums
+          ${isKorea ? 'text-yellow-300' : 'text-white/50'}`}>
+          {match.time} KST
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── MatchSchedulePanel ─────────────────────────────────────────────────────
+function MatchSchedulePanel({ selectedMatch, onSelectMatch, venueCount }: {
+  selectedMatch: Fixture | null;
+  onSelectMatch: (m: Fixture) => void;
+  venueCount: number;
+}) {
+  const upcoming = FIXTURES.filter(f =>
+    new Date(`${f.date}T${f.time}:00+09:00`) >= new Date()
+  );
+  return (
+    <div className="flex-1 bg-black/52 border-t-4 border-red-500 rounded-b-xl rounded-tr-xl overflow-hidden flex flex-col">
+      {/* Header */}
+      <div className="shrink-0 bg-red-900/55 px-3 py-2 border-b border-white/10">
+        <p className="text-[7px] font-black tracking-[0.35em] text-white/55 uppercase">
+          FIFA World Cup 2026
+        </p>
+        <p className="text-[11px] font-black text-white tracking-[0.18em] uppercase mt-0.5">
+          Upcoming Matches
+        </p>
+      </div>
+      {/* Scrollable list */}
+      <div className="flex-1 overflow-y-auto min-h-0"
+        style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(180,0,0,0.45) transparent' }}>
+        {upcoming.map((match, i) => (
+          <React.Fragment key={`${match.date}-${match.time}`}>
+            <MatchCard
+              match={match}
+              selected={
+                selectedMatch?.date === match.date &&
+                selectedMatch?.time === match.time
+              }
+              onClick={() => onSelectMatch(match)}
+            />
+          </React.Fragment>
+        ))}
+      </div>
+      {/* Footer */}
+      <div className="shrink-0 px-3 py-2.5 border-t border-white/10 flex items-end justify-between">
+        <p className="text-[7.5px] text-white/30 uppercase tracking-[0.25em]">응원 장소</p>
+        <p className="text-[11px] font-black text-white leading-none">
+          {venueCount}<span className="text-[10px] text-red-400 ml-0.5">곳</span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── BottomSheet (모바일 장소 상세 — 시안 기반) ──────────────────
+function BottomSheet({ place, onClose }: { place: Place | null; onClose: () => void }) {
+  if (!place) return null;
+  return (
+    <>
+      <div className="lg:hidden fixed inset-0 bg-black/40 z-[400]" onClick={onClose} />
+      <div className="lg:hidden fixed inset-x-0 bottom-0 z-[500] bottom-sheet">
+        <div className="bg-[#111] rounded-t-3xl shadow-2xl overflow-hidden">
+          {/* 드래그 핸들 */}
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="w-9 h-1 rounded-full bg-white/20" />
+          </div>
+          {/* 콘텐츠 */}
+          <div className="px-4 pb-8 pt-2">
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center
+                rounded-full bg-white/10 text-white/50 text-lg active:bg-white/20"
+              aria-label="닫기"
+            >✕</button>
+            {/* 지역 + 장소명 */}
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[11px] bg-red-600 text-white px-2.5 py-0.5 rounded-md font-bold">
+                {place.region}
+              </span>
+            </div>
+            <h3 className="text-[22px] font-black text-white leading-tight pr-12 mb-1">
+              {place.name}
+            </h3>
+            {/* 주소 */}
+            <div className="flex items-start gap-1.5 mb-2">
+              <span className="text-[13px] mt-0.5">📍</span>
+              <p className="text-[13px] text-white/55 leading-snug">{place.address}</p>
+            </div>
+            {/* 태그 */}
+            {place.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {place.tags.map((tag, i) => (
+                  <span key={i} className="text-[11px] bg-white/8 border border-white/12 text-white/65
+                    px-2.5 py-1 rounded-full font-medium">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            {/* 네이버 지도 버튼 */}
+            <a
+              href={place.mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-4 bg-red-600
+                text-white font-black text-[16px] rounded-2xl active:opacity-80 select-none"
+            >
+              🗺️ 네이버 지도에서 보기
+            </a>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── PlaceList (목록 보기 — 모바일 전용) ──────────────────────────
+function PlaceList({ places, onSelect }: {
+  places: Place[];
+  onSelect: (place: Place) => void;
+}) {
+  if (places.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-white/35">
+        <p className="text-[16px] mb-1">검색 결과가 없습니다</p>
+        <p className="text-[13px]">다른 검색어를 입력해 보세요</p>
+      </div>
+    );
+  }
+  return (
+    <div className="px-3 pt-2 pb-4 flex flex-col gap-2">
+      <p className="text-[11px] text-white/40 font-bold tracking-wider uppercase px-1 mb-1">
+        {places.length}개 장소
+      </p>
+      {places.map((place) => (
+        <button
+          key={place.id}
+          onClick={() => onSelect(place)}
+          className="w-full text-left bg-black/50 border border-white/10 rounded-2xl p-4
+            active:bg-red-950/60 active:border-red-700/50 transition-colors min-h-[76px]"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-bold shrink-0">
+                  {place.region}
+                </span>
+              </div>
+              <p className="text-[16px] font-black text-white leading-tight truncate">{place.name}</p>
+              <p className="text-[12px] text-white/45 mt-0.5 truncate">{place.address}</p>
+            </div>
+            <span className="text-white/20 text-[20px] shrink-0 mt-1">›</span>
+          </div>
+          {place.tags.length > 0 && (
+            <div className="flex gap-1.5 mt-2 flex-wrap">
+              {place.tags.slice(0, 3).map((tag, i) => (
+                <span key={i} className="text-[10px] bg-white/8 text-white/50 px-2 py-0.5 rounded-full">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export default function App() {
+  const [countdown, setCountdown] = useState(getCountdown);
+  const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
+  const [mobilePlace, setMobilePlace] = useState<Place | null>(null);
+  const [listView, setListView] = useState(false);
+
+  // ── 검색 / 지역 필터 상태 ──────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState('전체');
+
+  // 검색어 기반 마커 필터 (지역 필터는 마커에 영향 없음 — 지도 이동만)
+  const displayedSpots = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return spots;
+    return spots.filter((spot) =>
+      spot.name.toLowerCase().includes(q) ||
+      spot.address.toLowerCase().includes(q) ||
+      spot.region.toLowerCase().includes(q)
+    );
+  }, [searchQuery]);
+
+  // 지역 필터 → 지도 중심 이동 전용 (마커는 항상 전체 표시)
+  const mapCenter = (REGION_CENTERS as Record<string, { lat: number; lng: number; level: number } | null>)[selectedRegion] ?? null;
+
+  const handleRegionSelect = (region: string) => {
+    setSelectedRegion(region);
+    // 검색어는 유지 — 지역 전환은 지도 이동만
+  };
+
+  useEffect(() => {
+    const timer = setInterval(() => setCountdown(getCountdown()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  return (
+    <div className="app-root h-screen text-white flex flex-col font-sans overflow-hidden" style={{ background: '#7a0000' }}>
+
+      {/* ════════════════════════════════════════
+          히어로 헤더 — 반응형 (모바일 90px / 태블릿 120px / 데스크탑 168px)
+      ════════════════════════════════════════ */}
+      <header
+        className="hero-header shrink-0 relative overflow-hidden h-[130px] lg:h-[168px]"
+        style={{
+          backgroundImage: 'url(/background/hero-bg.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+
+        {/* ── 선수 Radial Glow ── */}
+        <div className="absolute pointer-events-none" style={{
+          top: '10px', left: 'calc(50% - 290px)',
+          width: '240px', height: '260px',
+          background: 'radial-gradient(ellipse at 50% 30%, rgba(255,60,60,0.50) 0%, transparent 65%)',
+          filter: 'blur(80px)', zIndex: 4,
+        }} />
+        <div className="absolute pointer-events-none" style={{
+          top: '10px', left: '50%', transform: 'translateX(-50%)',
+          width: '300px', height: '300px',
+          background: 'radial-gradient(ellipse at 50% 28%, rgba(255,60,60,0.45) 0%, transparent 62%)',
+          filter: 'blur(100px)', zIndex: 9,
+        }} />
+        <div className="absolute pointer-events-none" style={{
+          top: '10px', right: 'calc(50% - 278px)',
+          width: '240px', height: '260px',
+          background: 'radial-gradient(ellipse at 50% 30%, rgba(255,60,60,0.50) 0%, transparent 65%)',
+          filter: 'blur(80px)', zIndex: 4,
+        }} />
+
+        {/* ── 선수 이미지 ── */}
+
+        {/* 손흥민 — 중앙 */}
+        <div className="hero-son-wrapper absolute" style={{ top: '5px', left: '50%', transform: 'translateX(-50%)', zIndex: 11 }}>
+          <img src="/players/son-2.png" alt="손흥민" style={{
+            height: '230px', width: 'auto', opacity: 1.0,
+            mixBlendMode: 'multiply',
+            filter: 'drop-shadow(0px 4px 18px rgba(0,0,0,0.85))',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
+            maskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
+          }} />
+        </div>
+
+        {/* 이강인 — 좌측 (손흥민보다 앞 레이어, 얼굴 가림 방지) */}
+        <div className="absolute player-side-img" style={{ top: '14px', left: 'calc(50% - 318px)', zIndex: 14 }}>
+          <img src="/players/lee-2.png" alt="이강인" style={{
+            height: '232px', width: 'auto', opacity: 0.98,
+            filter: 'drop-shadow(0px 4px 18px rgba(0,0,0,0.85))',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
+            maskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
+          }} />
+        </div>
+
+        {/* 조규성 — 우측 (82px 좌측 이동, 머리 온전히 노출) */}
+        <div className="absolute player-side-img" style={{ top: '14px', right: 'calc(50% - 310px)', zIndex: 8 }}>
+          <img src="/players/cho-2.png" alt="조규성" style={{
+            height: '370px', width: 'auto', opacity: 0.98,
+            filter: 'drop-shadow(0px 4px 18px rgba(0,0,0,0.85))',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
+            maskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
+          }} />
+        </div>
+
+        {/* 텍스트 가독성 오버레이 */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/48 via-transparent to-black/48 pointer-events-none" style={{ zIndex: 15 }} />
+        <div className="absolute top-0 left-0 right-0 h-[20px] bg-gradient-to-b from-black/25 to-transparent pointer-events-none" style={{ zIndex: 15 }} />
+        <div className="absolute bottom-0 left-0 right-0 h-[27px] bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" style={{ zIndex: 15 }} />
+
+        {/* ── 텍스트 콘텐츠 (z-20) ── */}
+        <div className="relative flex flex-col justify-between h-full px-5 pt-2 pb-1.5 md:px-7" style={{ zIndex: 20 }}>
+
+          {/* 상단: 타이틀 + 카운트다운 */}
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              {/* ── 브랜드 로고 ── */}
+              <div className="relative" style={{ userSelect: 'none', lineHeight: 1 }}>
+
+                {/* 브러시 스트로크 SVG */}
+                <svg
+                  aria-hidden="true"
+                  className="absolute pointer-events-none logo-brush"
+                  style={{ top: '-3px', left: '-8px', width: '240px', height: '62px', overflow: 'visible' }}
+                  viewBox="0 0 320 82"
+                >
+                  <defs>
+                    <filter id="brush-rough" x="-8%" y="-40%" width="116%" height="180%">
+                      <feTurbulence type="fractalNoise" baseFrequency="0.040 0.016" numOctaves="3" seed="7" result="n"/>
+                      <feDisplacementMap in="SourceGraphic" in2="n" scale="8" xChannelSelector="R" yChannelSelector="G"/>
+                    </filter>
+                  </defs>
+                  {/* 메인 브러시 스트로크 */}
+                  <path
+                    d="M0,54 C32,28 72,20 122,30 C172,40 205,24 250,16 C266,13 288,11 318,9
+                       L319,34 C289,36 267,38 251,41 C206,50 173,66 123,56 C73,46 33,54 1,80 Z"
+                    fill="rgba(255,255,255,0.85)"
+                    filter="url(#brush-rough)"
+                  />
+                  {/* 보조 얇은 스트로크 */}
+                  <path
+                    d="M-3,18 C22,12 56,8 96,12 C136,16 162,8 198,4 L200,13
+                       C164,17 138,25 98,21 C58,17 24,21 -1,27 Z"
+                    fill="rgba(255,255,255,0.20)"
+                    filter="url(#brush-rough)"
+                  />
+                </svg>
+
+                {/* 로고 텍스트 */}
+                <div className="relative flex items-baseline" style={{ gap: '2px' }}>
+                  {/* 응원 — 흰색 */}
+                  <span className="logo-text-span" style={{
+                    fontFamily: "'Black Han Sans', 'Noto Sans KR', sans-serif",
+                    fontSize: '52px',
+                    color: '#FFFFFF',
+                    lineHeight: 1,
+                    letterSpacing: '-0.01em',
+                    textShadow: [
+                      '2px 2px 0 #080000',
+                      '3px 3px 0 #080000',
+                      '4px 4px 0 #080000',
+                      '5px 5px 0 #080000',
+                      '6px 6px 0 #080000',
+                      '7px 8px 15px rgba(0,0,0,0.92)',
+                      '0 0 35px rgba(255,255,255,0.18)',
+                    ].join(', '),
+                  }}>응원</span>
+                  {/* 맵 — 붉은색 */}
+                  <span className="logo-text-span" style={{
+                    fontFamily: "'Black Han Sans', 'Noto Sans KR', sans-serif",
+                    fontSize: '52px',
+                    color: '#FF1A1A',
+                    lineHeight: 1,
+                    letterSpacing: '-0.01em',
+                    textShadow: [
+                      '2px 2px 0 #080000',
+                      '3px 3px 0 #080000',
+                      '4px 4px 0 #080000',
+                      '5px 5px 0 #080000',
+                      '6px 6px 0 #080000',
+                      '7px 8px 15px rgba(0,0,0,0.92)',
+                      '0 0 30px rgba(255,30,30,0.65)',
+                    ].join(', '),
+                  }}>맵</span>
+                </div>
+              </div>
+
+              <p
+                className="text-[10px] text-red-100/80 mt-1 font-semibold tracking-[0.14em]"
+                style={{
+                  fontFamily: "'Noto Sans KR', sans-serif",
+                  textShadow: '0 1px 10px rgba(0,0,0,0.92)',
+                }}
+              >
+                대한민국 축구 중계 스팟 찾기
+              </p>
+            </div>
+
+            {countdown ? (
+              <div
+                className="countdown-widget shrink-0 rounded-xl px-4 py-2 min-w-[170px] backdrop-blur-sm"
+                style={{ background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(255,255,255,0.24)' }}
+              >
+                <p className="text-[13px] font-bold text-white leading-tight">
+                  🇰🇷 대한민국 <span className="text-red-200/50 font-normal">vs</span> 체코
+                </p>
+                <p className="text-[11px] text-red-100/50 leading-tight mt-0.5 mb-1">6월 12일 오전 11시</p>
+                <p className="text-[21px] font-black text-yellow-300 leading-none tabular-nums">D-{countdown.days}</p>
+                <p className="text-[14px] font-bold text-white leading-tight tabular-nums mt-0.5">
+                  {pad(countdown.hours)}:{pad(countdown.minutes)}:{pad(countdown.seconds)}{' '}
+                  <span className="text-red-100/50 font-normal text-[11px]">남음</span>
+                </p>
+              </div>
+            ) : (
+              <div
+                className="countdown-widget shrink-0 rounded-xl px-4 py-2 min-w-[170px]"
+                style={{ background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(255,255,255,0.24)' }}
+              >
+                <p className="text-[13px] font-bold text-white">🇰🇷 대한민국 vs 체코</p>
+                <p className="text-[13px] font-bold text-yellow-300 animate-pulse mt-1">경기 진행 중 또는 종료</p>
+              </div>
+            )}
+          </div>
+
+          {/* 하단: 서브텍스트 */}
+          <div className="flex items-end justify-between">
+            <p
+              className="text-[11px] font-black text-white tracking-tight"
+              style={{ textShadow: '0 1px 12px rgba(0,0,0,0.98)' }}
+            >
+              서울 전역 응원 스팟 {spots.length}곳
+            </p>
+            <p className="text-[8px] text-white/30 uppercase tracking-[0.2em] font-bold pb-0.5">
+              FIFA World Cup 2026
+            </p>
+          </div>
+
+        </div>
+      </header>
+
+      {/* ═══ 모바일 전용: 검색창 + 목록보기 + 지역 필터 바 ═══ */}
+      <div className="lg:hidden shrink-0 bg-[#0d0000] border-b border-white/8">
+        {/* 검색 + 목록보기 버튼 */}
+        <div className="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
+          <div className="flex-1">
+            <SearchBar value={searchQuery} onChange={setSearchQuery} />
+          </div>
+          <button
+            onClick={() => setListView(v => !v)}
+            className={[
+              'shrink-0 flex items-center gap-1.5 px-3 rounded-xl font-bold text-[12px]',
+              'border min-h-[44px] min-w-[76px] justify-center transition-colors active:opacity-75',
+              listView
+                ? 'bg-red-600 border-red-500 text-white'
+                : 'bg-white/10 border-white/20 text-white/80',
+            ].join(' ')}
+          >
+            {listView ? '🗺️ 지도' : '≡ 목록'}
+          </button>
+        </div>
+        {/* 지역 필터 */}
+        <div className="px-2 pb-2.5">
+          <RegionFilter regions={REGIONS} selected={selectedRegion} onSelect={handleRegionSelect} />
+        </div>
+      </div>
+
+      {/* 메인 — 지도 또는 목록 */}
+      <main className="flex-1 min-h-0 relative overflow-hidden flex flex-col" style={{ background: '#7a0000' }}>
+
+        {/* 배경 장식 (데스크탑) */}
+        <div className="absolute inset-0 pointer-events-none select-none hidden lg:block" aria-hidden="true">
+          <div className="absolute inset-0 bg-gradient-to-b from-black/22 via-transparent to-black/32" />
+          <div className="absolute left-0 top-0 bottom-0 w-[28%] bg-gradient-to-r from-black/35 via-black/10 to-transparent" />
+          <div className="absolute right-0 top-0 bottom-0 w-[28%] bg-gradient-to-l from-black/35 via-black/10 to-transparent" />
+          <div className="absolute left-0 top-0 bottom-0 w-[30%] opacity-[0.12]"
+            style={{ backgroundImage: 'repeating-linear-gradient(-52deg, #EA580C 0px, #EA580C 10px, transparent 10px, transparent 36px, #EA580C 36px, #EA580C 44px, transparent 44px, transparent 66px)' }} />
+          <div className="absolute right-0 top-0 bottom-0 w-[30%] opacity-[0.13]"
+            style={{ backgroundImage: 'radial-gradient(circle, #ff8888 2px, transparent 2px)', backgroundSize: '22px 22px' }} />
+          <div className="absolute left-[0%] top-1/2 -translate-y-[48%]">
+            <TigerSVG className="w-44 h-44 xl:w-56 xl:h-56 opacity-[0.40]" />
+          </div>
+          <div className="absolute right-[0%] top-1/2 -translate-y-1/2">
+            <TaegukSVG className="w-40 h-40 xl:w-52 xl:h-52 opacity-[0.38]" />
+          </div>
+        </div>
+
+        {/* 콘텐츠 — 모바일: 패딩 없이 꽉 채움 / 데스크탑: 패딩+사이드바 */}
+        <div className="main-content-wrap relative z-10 flex-1 min-h-0 flex items-stretch p-0 lg:p-5 gap-0 lg:gap-4">
+
+          {/* 경기 일정 패널 — 데스크탑만 */}
+          <div className="hidden lg:flex flex-col gap-0 w-[185px] xl:w-[200px] shrink-0">
+            <MatchSchedulePanel
+              selectedMatch={selectedFixture}
+              onSelectMatch={setSelectedFixture}
+              venueCount={displayedSpots.length}
+            />
+          </div>
+
+          {/* 지도/목록 영역 */}
+          <div className="flex-1 min-w-0 flex flex-col gap-0">
+
+            {/* 검색창 헤더 — 데스크탑만 */}
+            <div className="hidden lg:block shrink-0 rounded-t-xl px-3 py-2 border-t-2 border-x-2 border-red-400/48"
+              style={{ background: 'rgba(0,0,0,0.42)' }}>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[11px] font-black text-white tracking-wider uppercase">서울 응원 스팟 지도</p>
+                <p className="text-[10px] text-red-300/60 font-bold tabular-nums">{displayedSpots.length}개 장소</p>
+              </div>
+              <SearchBar value={searchQuery} onChange={setSearchQuery} />
+            </div>
+
+            {/* 지도 — 목록보기 시 모바일에서 숨김 */}
+            <div className={`flex-1 min-h-0 lg:border-x-2 lg:border-b-2 border-red-400/48
+              lg:rounded-t-none overflow-hidden relative
+              ${listView ? 'hidden lg:flex lg:flex-col' : 'flex flex-col'}`}>
+              <MapView places={displayedSpots} mapCenter={mapCenter} onPlaceSelect={(p) => {
+                setMobilePlace(p);
+                if (p) setListView(false);
+              }} />
+
+              {/* 지역 필터 오버레이 — 데스크탑만 */}
+              <div className="hidden lg:block absolute top-2.5 left-2.5 right-2.5 pointer-events-none" style={{ zIndex: 200 }}>
+                <div className="inline-flex max-w-full bg-black/60 backdrop-blur-sm rounded-xl px-2 py-1.5
+                  pointer-events-auto overflow-x-auto" style={{ scrollbarWidth: 'none' } as React.CSSProperties}>
+                  <RegionFilter regions={REGIONS} selected={selectedRegion} onSelect={handleRegionSelect} />
+                </div>
+              </div>
+
+              {/* 검색 결과 없음 */}
+              {displayedSpots.length === 0 && searchQuery.trim() && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 100 }}>
+                  <div className="bg-black/72 border border-white/12 rounded-xl px-5 py-3.5 text-center">
+                    <p className="text-[13px] font-bold text-white/80">검색 결과가 없습니다</p>
+                    <p className="text-[11px] text-white/40 mt-1">다른 검색어를 입력해 보세요</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 목록 보기 — 모바일 전용 */}
+            {listView && (
+              <div className="lg:hidden flex-1 min-h-0 overflow-y-auto" style={{ background: '#0d0000' }}>
+                <PlaceList
+                  places={displayedSpots}
+                  onSelect={(place) => {
+                    setMobilePlace(place);
+                    setListView(false);
+                  }}
+                />
+              </div>
+            )}
+
+          </div>
+        </div>
+      </main>
+
+      {/* Bottom Sheet */}
+      <BottomSheet place={mobilePlace} onClose={() => setMobilePlace(null)} />
+
+      {/* 모바일 하단 탭 바 */}
+      <nav className="lg:hidden shrink-0 flex items-stretch bg-[#0d0000]/98 border-t border-white/10"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <button
+          onClick={() => setListView(false)}
+          className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px]
+            transition-colors ${!listView ? 'text-red-500' : 'text-white/35'}`}
+        >
+          <span className="text-[22px]">🗺️</span>
+          <span className="text-[10px] font-bold tracking-wide">지도</span>
+        </button>
+        <button
+          onClick={() => setListView(true)}
+          className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px]
+            transition-colors ${listView ? 'text-red-500' : 'text-white/35'}`}
+        >
+          <span className="text-[22px]">⚽</span>
+          <span className="text-[10px] font-bold tracking-wide">응원 스팟</span>
+        </button>
+        <button className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] text-white/35">
+          <span className="text-[22px]">ℹ️</span>
+          <span className="text-[10px] font-bold tracking-wide">정보</span>
+        </button>
+      </nav>
+    </div>
+  );
+}
