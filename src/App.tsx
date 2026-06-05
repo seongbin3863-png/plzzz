@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { spots, REGIONS, REGION_CENTERS } from './data/spots';
 import { MapView, type Place } from './components/MapView.tsx';
 import { SearchBar } from './components/SearchBar.tsx';
@@ -163,7 +163,7 @@ function MatchCard({ match, selected, onClick }: {
 }
 
 // ── MatchSchedulePanel ─────────────────────────────────────────────────────
-function MatchSchedulePanel({ selectedMatch, onSelectMatch, venueCount }: {
+const MatchSchedulePanel = React.memo(function MatchSchedulePanel({ selectedMatch, onSelectMatch, venueCount }: {
   selectedMatch: Fixture | null;
   onSelectMatch: (m: Fixture) => void;
   venueCount: number;
@@ -207,63 +207,424 @@ function MatchSchedulePanel({ selectedMatch, onSelectMatch, venueCount }: {
       </div>
     </div>
   );
-}
+});
 
-// ── BottomSheet (모바일 장소 상세 — 시안 기반) ──────────────────
-function BottomSheet({ place, onClose }: { place: Place | null; onClose: () => void }) {
+// ── HOT NOW 전광판 (모바일 — 가로 마퀴) ─────────────────────────
+const HOT_SUFFIX = [
+  '응원 열기 상승중', '현재 인기 급상승', '🔥 HOT', '지금 뜨는 중', '응원 인기 최상위',
+];
+const HotNowTicker = React.memo(function HotNowTicker({ hotSpots, onSelect }: { hotSpots: Place[]; onSelect: (place: Place) => void }) {
+  if (!hotSpots.length) return null;
+
+  const renderItems = (ariaHidden?: boolean) => (
+    <span className="whitespace-nowrap px-4 flex items-stretch" aria-hidden={ariaHidden || undefined}>
+      {hotSpots.map((s, i) => (
+        <React.Fragment key={s.id}>
+          <button
+            onClick={() => onSelect(s)}
+            className="h-full flex items-center text-[11.5px] font-bold text-red-200/75 hover:text-red-300 hover:underline cursor-pointer transition-colors px-1"
+          >
+            {s.name}{'  '}{HOT_SUFFIX[i % HOT_SUFFIX.length]}
+          </button>
+          <span className="text-red-800/50 mx-3 flex items-center">·</span>
+        </React.Fragment>
+      ))}
+    </span>
+  );
+
+  return (
+    <div className="overflow-hidden flex items-stretch bg-black/75 border-b border-red-900/50"
+      style={{ height: '34px' }}>
+      <span className="shrink-0 px-2.5 text-[11px] font-black text-red-500 tracking-widest border-r border-red-800/50 flex items-center">
+        🔥 HOT
+      </span>
+      <div className="flex-1 overflow-hidden relative flex items-center">
+        <div className="hot-ticker-track h-full">
+          {renderItems()}
+          {renderItems(true)}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ── HOT NOW 패널 (PC 사이드바용) ─────────────────────────────────
+const HotNowPanel = React.memo(function HotNowPanel({ hotSpots, onSelect }: { hotSpots: Place[]; onSelect: (place: Place) => void }) {
+  if (!hotSpots.length) return null;
+  return (
+    <div className="shrink-0 bg-black/50 border-t-4 border-orange-500 rounded-b-xl rounded-tr-xl overflow-hidden mt-2">
+      <div className="bg-orange-900/35 px-3 py-2 border-b border-white/8 flex items-center gap-1.5">
+        <span className="text-[13px]">🔥</span>
+        <span className="text-[9.5px] font-black text-orange-300 uppercase tracking-[0.28em]">HOT NOW</span>
+      </div>
+      {hotSpots.map((s, i) => (
+        <button
+          key={s.id}
+          onClick={() => onSelect(s)}
+          className="w-full px-3 py-2 border-b border-white/6 last:border-0 flex items-center gap-2 hover:bg-orange-900/20 active:bg-orange-900/30 transition-colors cursor-pointer text-left"
+        >
+          <span className={`text-[10px] font-black w-4 shrink-0 tabular-nums ${
+            i === 0 ? 'text-orange-400' : i === 1 ? 'text-orange-500/60' : 'text-white/20'
+          }`}>{i + 1}</span>
+          <span className="text-[10.5px] font-bold text-white/75 flex-1 truncate">{s.name}</span>
+          <span className="text-[9px] text-white/28 shrink-0">{s.region}</span>
+        </button>
+      ))}
+    </div>
+  );
+});
+
+// ── PlaceSheet — 드래그 가능한 응원 스팟 상세 ───────────────────
+// 스냅 포인트: 38vh (기본) → 65vh (근처 스팟) → 90vh (전체)
+const SNAP_VH = [38, 65, 90];
+
+const PlaceSheet = React.memo(function PlaceSheet({ place, onClose, onSelectPlace, allSpots }: {
+  place: Place | null;
+  onClose: () => void;
+  onSelectPlace: (p: Place) => void;
+  allSpots: Place[];
+}) {
+  const [snapIdx, setSnapIdx] = React.useState(0);
+  const [dragOffset, setDragOffset] = React.useState(0);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const startY = React.useRef(0);
+
+  React.useEffect(() => {
+    if (place) setSnapIdx(0);
+  }, [place?.id]);
+
   if (!place) return null;
+
+  const wh = typeof window !== 'undefined' ? window.innerHeight : 800;
+  const baseH = (SNAP_VH[snapIdx] / 100) * wh;
+  const currentH = Math.max(120, Math.min(wh * 0.94, baseH - dragOffset));
+
+  const onHandleDown = (e: React.PointerEvent) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    startY.current = e.clientY;
+    setIsDragging(true);
+  };
+  const onHandleMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    setDragOffset(e.clientY - startY.current);
+  };
+  const onHandleUp = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    const delta = e.clientY - startY.current;
+    setDragOffset(0);
+    if (delta > 70) {
+      if (snapIdx === 0) onClose();
+      else setSnapIdx(i => i - 1);
+    } else if (delta < -70) {
+      setSnapIdx(i => Math.min(i + 1, SNAP_VH.length - 1));
+    }
+  };
+
+  const isExpanded = snapIdx >= 1;
+  const chips: string[] = (place as any).hashtags?.length
+    ? (place as any).hashtags
+    : place.tags;
+  const nearbySpots = allSpots
+    .filter(s => s.region === place.region && s.id !== place.id)
+    .slice(0, 3);
+
   return (
     <>
-      <div className="lg:hidden fixed inset-0 bg-black/40 z-[400]" onClick={onClose} />
-      <div className="lg:hidden fixed inset-x-0 bottom-0 z-[500] bottom-sheet">
-        <div className="bg-[#111] rounded-t-3xl shadow-2xl overflow-hidden">
-          {/* 드래그 핸들 */}
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="w-9 h-1 rounded-full bg-white/20" />
+      {/* 배경 딤 — 모바일 전용 */}
+      <div className="lg:hidden fixed inset-0 z-[400] bg-black/30" onClick={onClose} />
+
+      {/* 시트 — 모바일 전용 */}
+      <div
+        className="lg:hidden fixed inset-x-0 bottom-0 z-[500]"
+        style={{
+          height: `${currentH}px`,
+          transition: isDragging ? 'none' : 'height 0.38s cubic-bezier(0.32,0.72,0,1)',
+        }}
+      >
+        <div className="h-full bg-[#0f0f0f] rounded-t-3xl shadow-2xl flex flex-col overflow-hidden border-t border-white/8">
+
+          {/* ── 드래그 핸들 ── */}
+          <div
+            className="shrink-0 flex flex-col items-center pt-3 pb-2 cursor-grab active:cursor-grabbing touch-none select-none"
+            onPointerDown={onHandleDown}
+            onPointerMove={onHandleMove}
+            onPointerUp={onHandleUp}
+            onPointerCancel={onHandleUp}
+          >
+            <div className="w-9 h-1.5 rounded-full bg-white/20" />
           </div>
-          {/* 콘텐츠 */}
-          <div className="px-4 pb-8 pt-2">
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center
-                rounded-full bg-white/10 text-white/50 text-lg active:bg-white/20"
-              aria-label="닫기"
-            >✕</button>
-            {/* 지역 + 장소명 */}
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-[11px] bg-red-600 text-white px-2.5 py-0.5 rounded-md font-bold">
+
+          {/* ── 스크롤 콘텐츠 ── */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+
+            {/* 히어로 이미지 */}
+            <div className="relative w-full bg-gradient-to-br from-red-950/50 via-black/80 to-black"
+              style={{ height: '175px', minHeight: '175px' }}>
+              {(place as any).images?.[0] ? (
+                <img
+                  src={(place as any).images[0]}
+                  alt={place.name}
+                  loading="lazy"
+                  decoding="async"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/15">
+                  <span style={{ fontSize: '54px', lineHeight: 1 }}>⚽</span>
+                  <span className="text-[11px] font-black tracking-[0.25em] uppercase">응원 스팟</span>
+                </div>
+              )}
+              {/* 닫기 */}
+              <button onClick={onClose}
+                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center
+                  rounded-full bg-black/60 backdrop-blur-sm text-white/60 text-[14px] active:opacity-60 z-10">
+                ✕
+              </button>
+            </div>
+
+            {/* ── 기본 정보 ── */}
+            <div className="px-5 pt-4">
+              <span className="inline-block text-[11px] bg-red-600 text-white
+                px-2.5 py-0.5 rounded-md font-black tracking-wide mb-2">
                 {place.region}
               </span>
+              <h2 className="text-[24px] font-black text-white leading-tight tracking-tight mb-2">
+                {place.name}
+              </h2>
+              <div className="flex items-start gap-2 pb-4 border-b border-white/8">
+                <span className="text-[14px] mt-0.5 shrink-0">📍</span>
+                <p className="text-[13px] text-white/50 leading-relaxed">{place.address}</p>
+              </div>
+
+              {/* 화면 종류 */}
+              {place.tags.length > 0 && (
+                <div className="py-4 border-b border-white/8">
+                  <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.18em] mb-2.5">
+                    화면 종류
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {place.tags.map((tag, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-white/6 border border-white/10
+                        rounded-xl px-3 py-2.5 min-h-[44px]">
+                        <span className="text-[16px]">{tag === '빔프로젝터' ? '📽️' : '📺'}</span>
+                        <span className="text-[13px] text-white/70 font-semibold">{tag}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 해시태그 */}
+              {chips.length > 0 && (
+                <div className="py-4 border-b border-white/8">
+                  <div className="flex flex-wrap gap-1.5">
+                    {chips.map((tag, i) => (
+                      <span key={i} className="text-[12px] bg-red-950/50 border border-red-700/30
+                        text-red-300/75 px-2.5 py-1 rounded-full font-medium">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 네이버 지도 버튼 */}
+              <div className="py-4">
+                <a href={place.mapUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-4 bg-red-600
+                    text-white font-black text-[15px] rounded-2xl active:opacity-80 select-none
+                    hover:bg-red-500 transition-colors">
+                  🗺️ 네이버 지도에서 보기
+                </a>
+              </div>
             </div>
-            <h3 className="text-[22px] font-black text-white leading-tight pr-12 mb-1">
-              {place.name}
-            </h3>
-            {/* 주소 */}
-            <div className="flex items-start gap-1.5 mb-2">
-              <span className="text-[13px] mt-0.5">📍</span>
-              <p className="text-[13px] text-white/55 leading-snug">{place.address}</p>
-            </div>
-            {/* 태그 */}
-            {place.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {place.tags.map((tag, i) => (
-                  <span key={i} className="text-[11px] bg-white/8 border border-white/12 text-white/65
-                    px-2.5 py-1 rounded-full font-medium">
-                    #{tag}
-                  </span>
-                ))}
+
+            {/* ── 확장 영역 (65%+ 스냅에서 표시) ── */}
+            {isExpanded && (
+              <div className="px-5">
+
+                {/* 근처 응원 스팟 */}
+                {nearbySpots.length > 0 && (
+                  <div className="pb-5 border-t border-white/8 pt-4">
+                    <p className="text-[11px] font-black text-white/35 uppercase tracking-[0.18em] mb-3">
+                      🏟️ {place.region} 근처 응원 스팟
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {nearbySpots.map(s => (
+                        <button key={s.id}
+                          onClick={() => onSelectPlace(s)}
+                          className="flex items-center gap-3 bg-white/5 border border-white/8
+                            rounded-2xl px-4 py-3 active:bg-white/10 transition-colors text-left min-h-[60px]">
+                          <div className="w-9 h-9 rounded-xl bg-red-600/20 border border-red-700/30
+                            flex items-center justify-center shrink-0">
+                            <span className="text-[15px]">📍</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-bold text-white truncate">{s.name}</p>
+                            <p className="text-[11px] text-white/35 truncate mt-0.5">{s.address}</p>
+                          </div>
+                          <span className="text-white/20 text-[20px] shrink-0">›</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 향후 기능 플레이스홀더 */}
+                <div className="pb-6 border-t border-white/8 pt-4">
+                  <p className="text-[11px] font-black text-white/35 uppercase tracking-[0.18em] mb-3">
+                    ✨ 곧 출시
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { icon: '⚽', label: '곧 가요', desc: '출발 예정 표시' },
+                      { icon: '🔥', label: '응원중', desc: '실시간 응원 현황' },
+                      { icon: '📸', label: '인증 사진', desc: '응원 사진 공유' },
+                      { icon: '➕', label: '스팟 제보', desc: '새 장소 제보하기' },
+                    ].map((f, i) => (
+                      <div key={i}
+                        className="flex flex-col bg-white/4 border border-dashed border-white/10
+                          rounded-2xl px-3 py-3.5 opacity-55 cursor-not-allowed select-none">
+                        <span className="text-[26px] mb-1.5 leading-none">{f.icon}</span>
+                        <p className="text-[13px] font-bold text-white">{f.label}</p>
+                        <p className="text-[11px] text-white/35 mt-0.5">{f.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-6" />
               </div>
             )}
-            {/* 네이버 지도 버튼 */}
-            <a
-              href={place.mapUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-4 bg-red-600
-                text-white font-black text-[16px] rounded-2xl active:opacity-80 select-none"
-            >
-              🗺️ 네이버 지도에서 보기
-            </a>
+
+            {/* 위로 당겨 더보기 힌트 */}
+            {snapIdx === 0 && (
+              <div className="flex flex-col items-center py-5 text-white/20 select-none">
+                <span className="text-[18px] mb-0.5">↑</span>
+                <span className="text-[10px] font-bold tracking-[0.15em] uppercase">위로 당기면 더 볼 수 있어요</span>
+              </div>
+            )}
+
+          </div>
+        </div>
+      </div>
+    </>
+  );
+});
+
+// ── ReportSheet (응원 스팟 제보 폼) ──────────────────────────────
+function ReportSheet({ open, onClose, regions }: {
+  open: boolean;
+  onClose: () => void;
+  regions: string[];
+}) {
+  const [name, setName] = React.useState('');
+  const [region, setRegion] = React.useState('');
+  const [reason, setReason] = React.useState('');
+  const [submitted, setSubmitted] = React.useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !region) return;
+    const report = {
+      id: Date.now().toString(),
+      name: name.trim(),
+      region,
+      reason: reason.trim(),
+      submittedAt: new Date().toISOString(),
+      status: 'pending',
+    };
+    const prev = JSON.parse(localStorage.getItem('spot-reports') || '[]');
+    localStorage.setItem('spot-reports', JSON.stringify([...prev, report]));
+    setSubmitted(true);
+  };
+
+  const handleClose = () => {
+    setName(''); setRegion(''); setReason(''); setSubmitted(false);
+    onClose();
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/50 z-[600]" onClick={handleClose} />
+      <div className="fixed inset-x-0 bottom-0 lg:inset-0 lg:flex lg:items-center lg:justify-center z-[700]">
+        <div className="bg-[#111] rounded-t-3xl lg:rounded-2xl shadow-2xl w-full lg:max-w-md bottom-sheet">
+          <div className="flex justify-center pt-3 pb-1 lg:hidden">
+            <div className="w-9 h-1 rounded-full bg-white/20" />
+          </div>
+          <div className="px-5 pb-8 pt-3">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-[18px] font-black text-white">📍 응원 스팟 제보</h2>
+              <button onClick={handleClose}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white/50">
+                ✕
+              </button>
+            </div>
+
+            {submitted ? (
+              <div className="py-8 text-center">
+                <p className="text-[44px] mb-3">✅</p>
+                <p className="text-[18px] font-black text-white mb-2">제보가 접수되었습니다</p>
+                <p className="text-[13px] text-white/50 leading-relaxed">
+                  관리자 검토 후 등록됩니다.<br />소중한 제보 감사합니다!
+                </p>
+                <button onClick={handleClose}
+                  className="mt-6 w-full py-4 bg-red-600 text-white font-black text-[15px] rounded-2xl active:opacity-80">
+                  확인
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <div>
+                  <label className="text-[12px] font-bold text-white/55 mb-1.5 block">
+                    업장명 <span className="text-red-400">*</span>
+                  </label>
+                  <input type="text" value={name} onChange={e => setName(e.target.value)}
+                    placeholder="예: 축구포차 홍대점" required
+                    className="w-full px-4 py-3 bg-white/8 border border-white/15 rounded-xl
+                      text-white text-[14px] placeholder-white/25 focus:outline-none
+                      focus:border-red-500/60 min-h-[48px]" />
+                </div>
+
+                <div>
+                  <label className="text-[12px] font-bold text-white/55 mb-1.5 block">
+                    지역 <span className="text-red-400">*</span>
+                  </label>
+                  <select value={region} onChange={e => setRegion(e.target.value)} required
+                    className="w-full px-4 py-3 bg-white/8 border border-white/15 rounded-xl
+                      text-white text-[14px] focus:outline-none focus:border-red-500/60
+                      min-h-[48px] appearance-none">
+                    <option value="" disabled className="bg-neutral-900 text-white/50">지역 선택</option>
+                    {regions.filter(r => r !== '전체').map(r => (
+                      <option key={r} value={r} className="bg-neutral-900 text-white">{r}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[12px] font-bold text-white/55 mb-1.5 block">
+                    추천 이유 <span className="text-white/30">(선택)</span>
+                  </label>
+                  <textarea value={reason} onChange={e => setReason(e.target.value)}
+                    placeholder="예: 대형 스크린, 월드컵 분위기 최고, 치맥 맛집" rows={3}
+                    className="w-full px-4 py-3 bg-white/8 border border-white/15 rounded-xl
+                      text-white text-[14px] placeholder-white/25 focus:outline-none
+                      focus:border-red-500/60 resize-none" />
+                </div>
+
+                <p className="text-[11px] text-white/30 -mt-2">
+                  * 위도/경도/주소는 운영자가 직접 확인 후 등록합니다.
+                </p>
+
+                <button type="submit" disabled={!name.trim() || !region}
+                  className="w-full py-4 bg-red-600 text-white font-black text-[15px] rounded-2xl
+                    disabled:opacity-35 active:opacity-80 min-h-[52px] transition-opacity">
+                  제보 제출
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </div>
@@ -272,7 +633,7 @@ function BottomSheet({ place, onClose }: { place: Place | null; onClose: () => v
 }
 
 // ── PlaceList (목록 보기 — 모바일 전용) ──────────────────────────
-function PlaceList({ places, onSelect }: {
+const PlaceList = React.memo(function PlaceList({ places, onSelect }: {
   places: Place[];
   onSelect: (place: Place) => void;
 }) {
@@ -321,36 +682,86 @@ function PlaceList({ places, onSelect }: {
       ))}
     </div>
   );
-}
+});
 
 export default function App() {
   const [countdown, setCountdown] = useState(getCountdown);
   const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
   const [mobilePlace, setMobilePlace] = useState<Place | null>(null);
   const [listView, setListView] = useState(false);
+  const [focusCoords, setFocusCoords] = useState<{ lat: number; lng: number } | null>(null);
+  // 세션 조회수 — 마커/목록 클릭 시 +1 (향후 DB 연동 시 교체)
+  const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
+
+  // hotScore = 세션 viewCounts + 초기 views — 향후 goingCount/checkInCount 합산으로 확장
+  const hotSpots = useMemo(() => {
+    const scored = (spots as unknown as Place[]).map(s => ({
+      ...s,
+      hotScore: (viewCounts[s.id] || 0) + ((s as any).views || 0),
+    }));
+    const hasViews = scored.some(s => s.hotScore > 0);
+    if (!hasViews) {
+      return [...(spots as unknown as Place[])]
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .slice(0, 5);
+    }
+    return scored.sort((a, b) => b.hotScore - a.hotScore).slice(0, 5);
+  }, [viewCounts]);
 
   // ── 검색 / 지역 필터 상태 ──────────────────────────────────────
-  const [searchQuery, setSearchQuery] = useState('');
+  // searchInput: 입력창 즉시 반영, debouncedSearch: 300ms 후 마커/목록 필터에 적용
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('전체');
 
-  // 검색어 기반 마커 필터 (지역 필터는 마커에 영향 없음 — 지도 이동만)
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // 검색어 기반 마커 필터 (지도용 — 마커는 항상 전체 지역 표시)
   const displayedSpots = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
+    const q = debouncedSearch.toLowerCase().trim();
     if (!q) return spots;
     return spots.filter((spot) =>
       spot.name.toLowerCase().includes(q) ||
       spot.address.toLowerCase().includes(q) ||
       spot.region.toLowerCase().includes(q)
     );
-  }, [searchQuery]);
+  }, [debouncedSearch]);
 
-  // 지역 필터 → 지도 중심 이동 전용 (마커는 항상 전체 표시)
+  // 목록용 — 검색어 + 지역 필터 모두 적용
+  const listSpots = useMemo(() => {
+    if (selectedRegion === '전체') return displayedSpots;
+    return displayedSpots.filter((spot) => spot.region === selectedRegion);
+  }, [displayedSpots, selectedRegion]);
+
+  // 지역 필터 → 지도 중심 이동 + 모바일에서는 목록 보기 전환
   const mapCenter = (REGION_CENTERS as Record<string, { lat: number; lng: number; level: number } | null>)[selectedRegion] ?? null;
 
-  const handleRegionSelect = (region: string) => {
+  const handleRegionSelect = useCallback((region: string) => {
     setSelectedRegion(region);
-    // 검색어는 유지 — 지역 전환은 지도 이동만
-  };
+    if (window.innerWidth < 1024) {
+      setListView(true);
+    }
+  }, []);
+
+  const handlePlaceSelect = useCallback((p: Place | null) => {
+    if (p) {
+      setViewCounts(prev => ({ ...prev, [p.id]: (prev[p.id] || 0) + 1 }));
+      setListView(false);
+    }
+    setMobilePlace(p);
+  }, []);
+
+  const handlePlaceClose = useCallback(() => setMobilePlace(null), []);
+  const handlePlaceSelectFromSheet = useCallback((p: Place) => setMobilePlace(p), []);
+
+  const handleListSelect = useCallback((place: Place) => {
+    setViewCounts(prev => ({ ...prev, [place.id]: (prev[place.id] || 0) + 1 }));
+    setMobilePlace(place);
+    setListView(false);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setCountdown(getCountdown()), 1000);
@@ -403,8 +814,10 @@ export default function App() {
             height: '230px', width: 'auto', opacity: 1.0,
             mixBlendMode: 'multiply',
             filter: 'drop-shadow(0px 4px 18px rgba(0,0,0,0.85))',
-            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
-            maskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 18%), linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
+            maskImage: 'linear-gradient(to right, transparent 0%, black 18%), linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
+            WebkitMaskComposite: 'destination-in',
+            maskComposite: 'intersect',
           }} />
         </div>
 
@@ -563,12 +976,23 @@ export default function App() {
         </div>
       </header>
 
+      {/* 🔥 HOT NOW 전광판 — 모바일 전용 (헤더↔검색창 사이) */}
+      <div className="lg:hidden shrink-0 hot-ticker-wrap">
+        <HotNowTicker hotSpots={hotSpots} onSelect={(place) => {
+          setMobilePlace(place);
+          setListView(false);
+          if (place.lat != null && place.lng != null) {
+            setFocusCoords({ lat: place.lat, lng: place.lng });
+          }
+        }} />
+      </div>
+
       {/* ═══ 모바일 전용: 검색창 + 목록보기 + 지역 필터 바 ═══ */}
       <div className="lg:hidden shrink-0 bg-[#0d0000] border-b border-white/8">
         {/* 검색 + 목록보기 버튼 */}
-        <div className="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
+        <div className="flex items-center gap-2 px-3 pt-1 pb-0.5 landscape-search-row">
           <div className="flex-1">
-            <SearchBar value={searchQuery} onChange={setSearchQuery} />
+            <SearchBar value={searchInput} onChange={setSearchInput} />
           </div>
           <button
             onClick={() => setListView(v => !v)}
@@ -584,7 +1008,7 @@ export default function App() {
           </button>
         </div>
         {/* 지역 필터 */}
-        <div className="px-2 pb-2.5">
+        <div className="px-2 pb-1 landscape-filter-row">
           <RegionFilter regions={REGIONS} selected={selectedRegion} onSelect={handleRegionSelect} />
         </div>
       </div>
@@ -612,13 +1036,21 @@ export default function App() {
         {/* 콘텐츠 — 모바일: 패딩 없이 꽉 채움 / 데스크탑: 패딩+사이드바 */}
         <div className="main-content-wrap relative z-10 flex-1 min-h-0 flex items-stretch p-0 lg:p-5 gap-0 lg:gap-4">
 
-          {/* 경기 일정 패널 — 데스크탑만 */}
+          {/* 경기 일정 패널 + HOT NOW — 데스크탑만 */}
           <div className="hidden lg:flex flex-col gap-0 w-[185px] xl:w-[200px] shrink-0">
-            <MatchSchedulePanel
-              selectedMatch={selectedFixture}
-              onSelectMatch={setSelectedFixture}
-              venueCount={displayedSpots.length}
-            />
+            <div className="flex-1 min-h-0 flex flex-col">
+              <MatchSchedulePanel
+                selectedMatch={selectedFixture}
+                onSelectMatch={setSelectedFixture}
+                venueCount={displayedSpots.length}
+              />
+            </div>
+            <HotNowPanel hotSpots={hotSpots} onSelect={(place) => {
+              setMobilePlace(place);
+              if (place.lat != null && place.lng != null) {
+                setFocusCoords({ lat: place.lat, lng: place.lng });
+              }
+            }} />
           </div>
 
           {/* 지도/목록 영역 */}
@@ -631,17 +1063,14 @@ export default function App() {
                 <p className="text-[11px] font-black text-white tracking-wider uppercase">서울 응원 스팟 지도</p>
                 <p className="text-[10px] text-red-300/60 font-bold tabular-nums">{displayedSpots.length}개 장소</p>
               </div>
-              <SearchBar value={searchQuery} onChange={setSearchQuery} />
+              <SearchBar value={searchInput} onChange={setSearchInput} />
             </div>
 
             {/* 지도 — 목록보기 시 모바일에서 숨김 */}
             <div className={`flex-1 min-h-0 lg:border-x-2 lg:border-b-2 border-red-400/48
               lg:rounded-t-none overflow-hidden relative
               ${listView ? 'hidden lg:flex lg:flex-col' : 'flex flex-col'}`}>
-              <MapView places={displayedSpots} mapCenter={mapCenter} onPlaceSelect={(p) => {
-                setMobilePlace(p);
-                if (p) setListView(false);
-              }} />
+              <MapView places={displayedSpots} mapCenter={mapCenter} focusCoords={focusCoords} onPlaceSelect={handlePlaceSelect} />
 
               {/* 지역 필터 오버레이 — 데스크탑만 */}
               <div className="hidden lg:block absolute top-2.5 left-2.5 right-2.5 pointer-events-none" style={{ zIndex: 200 }}>
@@ -652,7 +1081,7 @@ export default function App() {
               </div>
 
               {/* 검색 결과 없음 */}
-              {displayedSpots.length === 0 && searchQuery.trim() && (
+              {displayedSpots.length === 0 && debouncedSearch.trim() && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 100 }}>
                   <div className="bg-black/72 border border-white/12 rounded-xl px-5 py-3.5 text-center">
                     <p className="text-[13px] font-bold text-white/80">검색 결과가 없습니다</p>
@@ -665,13 +1094,7 @@ export default function App() {
             {/* 목록 보기 — 모바일 전용 */}
             {listView && (
               <div className="lg:hidden flex-1 min-h-0 overflow-y-auto" style={{ background: '#0d0000' }}>
-                <PlaceList
-                  places={displayedSpots}
-                  onSelect={(place) => {
-                    setMobilePlace(place);
-                    setListView(false);
-                  }}
-                />
+                <PlaceList places={listSpots} onSelect={handleListSelect} />
               </div>
             )}
 
@@ -679,11 +1102,16 @@ export default function App() {
         </div>
       </main>
 
-      {/* Bottom Sheet */}
-      <BottomSheet place={mobilePlace} onClose={() => setMobilePlace(null)} />
+      {/* PlaceSheet — 전 플랫폼 드래그 가능 상세 */}
+      <PlaceSheet
+        place={mobilePlace}
+        onClose={handlePlaceClose}
+        onSelectPlace={handlePlaceSelectFromSheet}
+        allSpots={spots as unknown as Place[]}
+      />
 
       {/* 모바일 하단 탭 바 */}
-      <nav className="lg:hidden shrink-0 flex items-stretch bg-[#0d0000]/98 border-t border-white/10"
+      <nav className="lg:hidden shrink-0 flex items-stretch bg-[#0d0000]/98 border-t border-white/10 mobile-bottom-nav"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <button
           onClick={() => setListView(false)}

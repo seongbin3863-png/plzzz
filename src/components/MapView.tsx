@@ -10,6 +10,8 @@ export interface Place {
   lng?: number;
   tags: string[];
   mapUrl: string;
+  images?: string[];
+  hashtags?: string[];
 }
 
 export interface MapCenter {
@@ -21,6 +23,7 @@ export interface MapCenter {
 interface MapViewProps {
   places: Place[];
   mapCenter?: MapCenter | null;
+  focusCoords?: { lat: number; lng: number } | null;
   onPlaceSelect?: (place: Place | null) => void;
 }
 
@@ -44,7 +47,7 @@ const MARKER_SVG = encodeURIComponent(`
   </svg>
 `);
 
-export const MapView: React.FC<MapViewProps> = ({ places, mapCenter, onPlaceSelect }) => {
+const MapViewBase: React.FC<MapViewProps> = ({ places, mapCenter, focusCoords, onPlaceSelect }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const kakaoMapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -152,7 +155,6 @@ export const MapView: React.FC<MapViewProps> = ({ places, mapCenter, onPlaceSele
       const tagsHtml = place.tags.length > 0
         ? `<span style="font-size:11px;color:#dc2626;font-weight:600;display:block;margin-bottom:8px;">📺 ${place.tags.join(' · ')}</span>`
         : '';
-
       const infoContent = `
         <div style="padding:10px 12px;min-width:170px;max-width:220px;
           font-family:-apple-system,sans-serif;line-height:1.5;">
@@ -173,7 +175,6 @@ export const MapView: React.FC<MapViewProps> = ({ places, mapCenter, onPlaceSele
             네이버 지도 →
           </a>
         </div>`;
-
       const infoWindow = new window.kakao.maps.InfoWindow({ content: infoContent, removable: true });
 
       window.kakao.maps.event.addListener(marker, 'click', () => {
@@ -181,19 +182,13 @@ export const MapView: React.FC<MapViewProps> = ({ places, mapCenter, onPlaceSele
         currentInfoWindowRef.current = null;
         setSelectedPlace(place);
         onPlaceSelect?.(place);
-
-        console.log(
-          '[마커 클릭]', place.name,
-          '\n  place.lat:', place.lat, '| place.lng:', place.lng,
-          '\n  LatLng(lat, lng):', position.getLat(), position.getLng(),
-        );
-
-        // 1. setLevel 먼저 → 2. setCenter (즉각적) → 3. infoWindow.open
-        // panTo(애니메이션) + setLevel 동시 호출 시 충돌하여 지도가 잘못된 위치로 이동하는 문제 수정
         map.setLevel(4);
         map.setCenter(position);
-        infoWindow.open(map, marker);
-        currentInfoWindowRef.current = infoWindow;
+        // PC(≥1024px): InfoWindow 말풍선 / 모바일: PlaceSheet가 담당
+        if (window.innerWidth >= 1024) {
+          infoWindow.open(map, marker);
+          currentInfoWindowRef.current = infoWindow;
+        }
       });
     });
 
@@ -217,6 +212,15 @@ export const MapView: React.FC<MapViewProps> = ({ places, mapCenter, onPlaceSele
     );
     kakaoMapRef.current.setLevel(mapCenter.level);
   }, [isKakaoLoaded, mapCenter]);
+
+  // ── Effect 5: 특정 핀 포커스 → 해당 좌표로 지도 이동 ──────────
+  useEffect(() => {
+    if (!isKakaoLoaded || !kakaoMapRef.current || !focusCoords) return;
+    kakaoMapRef.current.setCenter(
+      new window.kakao.maps.LatLng(focusCoords.lat, focusCoords.lng)
+    );
+    kakaoMapRef.current.setLevel(4);
+  }, [isKakaoLoaded, focusCoords]);
 
   // ── 가상 지도 fallback (API 키 없을 때) ───────────────────────
   const [zoomLevel, setZoomLevel] = useState(3);
@@ -328,3 +332,5 @@ export const MapView: React.FC<MapViewProps> = ({ places, mapCenter, onPlaceSele
     </div>
   );
 };
+
+export const MapView = React.memo(MapViewBase);

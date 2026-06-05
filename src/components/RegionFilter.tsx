@@ -16,7 +16,7 @@ export const RegionFilter: React.FC<RegionFilterProps> = ({ regions, selected, o
         key={r}
         onClick={() => onSelect(r)}
         className={[
-          'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold border min-h-[36px]',
+          'shrink-0 px-3.5 py-2 rounded-full text-[12px] font-bold border min-h-[44px]',
           'transition-all duration-150 active:scale-95',
           selected === r
             ? 'bg-red-600 border-red-500 text-white shadow-[0_0_8px_rgba(220,0,0,0.40)]'

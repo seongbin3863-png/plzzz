@@ -7,10 +7,13 @@ export interface Spot {
   name: string;
   region: string;
   address: string;
-  lat?: number;   // 좌표 미확보 시 생략 — 추후 보강
+  lat?: number;
   lng?: number;
   tags: string[];
   mapUrl: string;
+  images: string[];
+  hashtags: string[];
+  views?: number;        // 누적 조회수 (향후 hotScore로 확장 예정)
 }
 
 export const spots: Spot[] = [
@@ -23,6 +26,8 @@ export const spots: Spot[] = [
     lng: 126.8300269,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/xHgppnXe',
+    images: [],
+    hashtags: ['스포츠펍', '대형스크린', '맥주', '축구응원', '발산'],
   },
   {
     id: '2',
@@ -33,6 +38,8 @@ export const spots: Spot[] = [
     lng: 126.9608616,
     tags: ['TV다수'],
     mapUrl: 'https://naver.me/GEXhvH16',
+    images: [],
+    hashtags: ['스포츠펍', '멀티TV', '맥주', '축구응원', '흑석'],
   },
   {
     id: '3',
@@ -43,6 +50,8 @@ export const spots: Spot[] = [
     lng: 126.8301750,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/5du4FSLf',
+    images: [],
+    hashtags: ['스포츠펍', '대형스크린', '맥주', '축구응원', '발산'],
   },
   {
     id: '4',
@@ -53,6 +62,8 @@ export const spots: Spot[] = [
     lng: 126.9772797,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/5qc34GC6',
+    images: [],
+    hashtags: ['스포츠펍', '대형스크린', '맥주', '축구응원', '시청'],
   },
   {
     id: '5',
@@ -63,6 +74,8 @@ export const spots: Spot[] = [
     lng: 126.9954016,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/565MHyrC',
+    images: [],
+    hashtags: ['감성라운지', '대형스크린', '축구응원', '을지로'],
   },
   {
     id: '6',
@@ -73,6 +86,8 @@ export const spots: Spot[] = [
     lng: 126.9929865,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/GmbMs2xp',
+    images: [],
+    hashtags: ['호프집', '맥주', '대형스크린', '축구응원', '을지로'],
   },
   {
     id: '7',
@@ -83,6 +98,8 @@ export const spots: Spot[] = [
     lng: 127.0070369,
     tags: ['TV다수'],
     mapUrl: 'https://naver.me/GtURcvPg',
+    images: [],
+    hashtags: ['스포츠펍', '멀티TV', '루프탑', '축구응원', '동대문'],
   },
   {
     id: '8',
@@ -93,6 +110,8 @@ export const spots: Spot[] = [
     lng: 126.9843029,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/5JpUL4hh',
+    images: [],
+    hashtags: ['바', '대형스크린', '맥주', '축구응원', '종로'],
   },
   {
     id: '9',
@@ -103,6 +122,9 @@ export const spots: Spot[] = [
     lng: 127.0588489,
     tags: ['TV다수'],
     mapUrl: 'https://naver.me/FhULo3Wn',
+    images: [],
+    hashtags: ['크래프트비어', '멀티TV', '대형매장', '축구응원', '강남'],
+    views: 118,
   },
   {
     id: '10',
@@ -113,6 +135,8 @@ export const spots: Spot[] = [
     lng: 126.9860324,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/xKERWtWb',
+    images: [],
+    hashtags: ['감성바', '대형스크린', '맥주', '축구응원', '종로'],
   },
   {
     id: '11',
@@ -123,6 +147,8 @@ export const spots: Spot[] = [
     lng: 126.9758872,
     tags: ['TV다수'],
     mapUrl: 'https://naver.me/xjgcD8Iy',
+    images: [],
+    hashtags: ['레트로감성', '멀티TV', '분위기맛집', '축구응원', '광화문'],
   },
   {
     id: '12',
@@ -133,6 +159,8 @@ export const spots: Spot[] = [
     lng: 126.9853858,
     tags: ['빔프로젝터', 'TV다수'],
     mapUrl: 'https://naver.me/xf5A4ZTp',
+    images: [],
+    hashtags: ['크래프트비어', '대형스크린', '멀티TV', '축구응원', '사당'],
   },
   {
     id: '13',
@@ -143,6 +171,8 @@ export const spots: Spot[] = [
     lng: 126.9499161,
     tags: ['TV'],
     mapUrl: 'https://naver.me/FtGfCTnd',
+    images: [],
+    hashtags: ['스포츠펍', '맥주', '축구응원', '서울대입구'],
   },
   {
     id: '14',
@@ -153,6 +183,8 @@ export const spots: Spot[] = [
     lng: 126.9555205,
     tags: ['빔프로젝터', 'TV다수'],
     mapUrl: 'https://naver.me/IFgdCto6',
+    images: [],
+    hashtags: ['스포츠펍', '대형스크린', '멀티TV', '맥주', '서울대입구'],
   },
   {
     id: '15',
@@ -163,6 +195,9 @@ export const spots: Spot[] = [
     lng: 126.9925552,
     tags: ['TV다수'],
     mapUrl: 'https://naver.me/xExW7nr6',
+    images: [],
+    hashtags: ['축구응원전문', '멀티TV', '맥주', '스포츠펍', '이태원'],
+    views: 162,
   },
   {
     id: '16',
@@ -173,9 +208,9 @@ export const spots: Spot[] = [
     lng: 126.9980415,
     tags: ['TV다수'],
     mapUrl: 'https://naver.me/G8s9uLbD',
+    images: [],
+    hashtags: ['스포츠펍', '멀티TV', '맥주', '축구응원', '이태원'],
   },
-
-  // ── 2차 추가 (좌표 보강 완료) ──────────────────────────────────────────────
   {
     id: '17',
     name: '스패로우 본점',
@@ -185,6 +220,8 @@ export const spots: Spot[] = [
     lng: 127.0170658,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/GKUqB68l',
+    images: [],
+    hashtags: ['스포츠펍', '대형스크린', '맥주', '축구응원', '성신여대'],
   },
   {
     id: '18',
@@ -195,6 +232,8 @@ export const spots: Spot[] = [
     lng: 126.9412219,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/xbA5Dh1e',
+    images: [],
+    hashtags: ['크래프트비어', '대형스크린', '맥주', '축구응원', '노량진'],
   },
   {
     id: '19',
@@ -205,6 +244,8 @@ export const spots: Spot[] = [
     lng: 127.0817557,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/Gq84w2ld',
+    images: [],
+    hashtags: ['스포츠펍', '대형스크린', '맥주', '축구응원', '잠실'],
   },
   {
     id: '20',
@@ -215,6 +256,8 @@ export const spots: Spot[] = [
     lng: 127.0736612,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/GZZUyTck',
+    images: [],
+    hashtags: ['스포츠펍', '대형스크린', '맥주', '축구응원', '노원'],
   },
   {
     id: '21',
@@ -225,6 +268,8 @@ export const spots: Spot[] = [
     lng: 126.9915600,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/xLW9zK19',
+    images: [],
+    hashtags: ['포차', '대형스크린', '분위기맛집', '축구응원', '이태원'],
   },
   {
     id: '22',
@@ -235,6 +280,8 @@ export const spots: Spot[] = [
     lng: 127.0228894,
     tags: [],
     mapUrl: 'https://naver.me/5cqmQt9h',
+    images: [],
+    hashtags: ['피자', '스포츠바', '축구응원', '논현'],
   },
   {
     id: '23',
@@ -245,6 +292,8 @@ export const spots: Spot[] = [
     lng: 126.9276005,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/FeXRNRXY',
+    images: [],
+    hashtags: ['크래프트비어', '대형스크린', '직장인', '축구응원', '여의도'],
   },
   {
     id: '24',
@@ -255,6 +304,9 @@ export const spots: Spot[] = [
     lng: 126.9224677,
     tags: ['TV다수'],
     mapUrl: 'https://naver.me/x0U3R0gW',
+    images: [],
+    hashtags: ['응원맛집', '멀티TV', '단체관람', '축구응원', '홍대'],
+    views: 184,
   },
   {
     id: '25',
@@ -265,6 +317,8 @@ export const spots: Spot[] = [
     lng: 127.0249422,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/5N15BkfQ',
+    images: [],
+    hashtags: ['포차', '대형스크린', '분위기맛집', '축구응원', '강남'],
   },
   {
     id: '26',
@@ -275,6 +329,8 @@ export const spots: Spot[] = [
     lng: 127.0545116,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/Ghbu139q',
+    images: [],
+    hashtags: ['피자', '대형스크린', '스포츠바', '축구응원', '선릉'],
   },
   {
     id: '27',
@@ -285,6 +341,9 @@ export const spots: Spot[] = [
     lng: 127.0275959,
     tags: ['TV다수'],
     mapUrl: 'https://naver.me/53lKOXVt',
+    images: [],
+    hashtags: ['스포츠펍', '멀티TV', '맥주', '축구응원', '강남'],
+    views: 147,
   },
   {
     id: '28',
@@ -295,6 +354,8 @@ export const spots: Spot[] = [
     lng: 126.9208262,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/x0UPIYym',
+    images: [],
+    hashtags: ['스포츠펍', '대형스크린', '맥주', '축구응원', '합정'],
   },
   {
     id: '29',
@@ -305,6 +366,9 @@ export const spots: Spot[] = [
     lng: 126.9229809,
     tags: ['TV다수'],
     mapUrl: 'https://naver.me/5jJTGGbS',
+    images: [],
+    hashtags: ['치킨', '치맥', '멀티TV', '축구응원', '홍대'],
+    views: 131,
   },
   {
     id: '30',
@@ -315,6 +379,8 @@ export const spots: Spot[] = [
     lng: 126.9271218,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/xExyi3iI',
+    images: [],
+    hashtags: ['삼겹살', '대형스크린', '분위기맛집', '축구응원', '홍대'],
   },
   {
     id: '31',
@@ -325,6 +391,8 @@ export const spots: Spot[] = [
     lng: 126.9182258,
     tags: ['TV다수'],
     mapUrl: 'https://naver.me/F42lLXEp',
+    images: [],
+    hashtags: ['스포츠펍', '멀티TV', '맥주', '축구응원', '홍대'],
   },
   {
     id: '32',
@@ -335,6 +403,8 @@ export const spots: Spot[] = [
     lng: 126.9154868,
     tags: ['TV다수'],
     mapUrl: 'https://naver.me/FhULAGmf',
+    images: [],
+    hashtags: ['단체관람', '멀티TV', '감성공간', '축구응원', '합정'],
   },
   {
     id: '33',
@@ -345,9 +415,9 @@ export const spots: Spot[] = [
     lng: 126.9256678,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/GDa2ivL5',
+    images: [],
+    hashtags: ['감성바', '대형스크린', '분위기맛집', '축구응원', '홍대'],
   },
-
-  // ── 기존 sampleData.js 원본 복구 (신촌·홍대) ──────────────────────────────
   {
     id: '34',
     name: '신촌 낭만오지',
@@ -357,6 +427,8 @@ export const spots: Spot[] = [
     lng: 126.9380832,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/5r9z7UxJ',
+    images: [],
+    hashtags: ['분위기맛집', '대형스크린', '맥주', '축구응원', '신촌'],
   },
   {
     id: '35',
@@ -367,6 +439,8 @@ export const spots: Spot[] = [
     lng: 126.9357571,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/FTXDlTC9',
+    images: [],
+    hashtags: ['치킨', '치맥', '대형스크린', '축구응원', '신촌'],
   },
   {
     id: '36',
@@ -377,6 +451,8 @@ export const spots: Spot[] = [
     lng: 126.9385177,
     tags: ['TV'],
     mapUrl: 'https://naver.me/IGJyfK7B',
+    images: [],
+    hashtags: ['스포츠바', '맥주', '축구응원', '신촌'],
   },
   {
     id: '37',
@@ -387,6 +463,8 @@ export const spots: Spot[] = [
     lng: 126.9221145,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/xq3drtjR',
+    images: [],
+    hashtags: ['호프집', '대형스크린', '맥주', '축구응원', '홍대'],
   },
   {
     id: '38',
@@ -397,11 +475,12 @@ export const spots: Spot[] = [
     lng: 126.9358819,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/Gipd4Lqn',
+    images: [],
+    hashtags: ['스포츠펍', '대형스크린', '맥주', '축구응원', '신촌'],
   },
 ];
 
 // ── 지역 필터 목록 ─────────────────────────────────────────────────────────
-// 향후 지역 추가 시: spots 배열에 데이터 추가 + REGION_CENTERS에 좌표 추가
 export const REGIONS = [
   '전체',
   // 서북·서부
@@ -417,34 +496,27 @@ export const REGIONS = [
 ];
 
 // ── 지역별 지도 중심 좌표 ────────────────────────────────────────────────────
-// 전체: null → 모든 마커가 보이도록 bounds fit
-// 각 지역: 해당 지역 스팟들의 중심 좌표 (평균값)
 export const REGION_CENTERS: Record<string, { lat: number; lng: number; level: number } | null> = {
   전체:       null,
-  // 서북·서부 (역 좌표 기준)
-  발산:       { lat: 37.5605, lng: 126.8301, level: 5 },  // 레츠펍·신사펍 중간
-  여의도:     { lat: 37.5217, lng: 126.9244, level: 5 },  // 여의도역
-  합정:       { lat: 37.5492, lng: 126.9146, level: 5 },  // 합정역
-  홍대:       { lat: 37.5572, lng: 126.9236, level: 5 },  // 홍대입구역
-  신촌:       { lat: 37.5574, lng: 126.9370, level: 5 },  // 4개 스팟 중심
-  노량진:     { lat: 37.5132, lng: 126.9423, level: 5 },  // 노량진역
+  발산:       { lat: 37.5605, lng: 126.8301, level: 5 },
+  여의도:     { lat: 37.5217, lng: 126.9244, level: 5 },
+  합정:       { lat: 37.5492, lng: 126.9146, level: 5 },
+  홍대:       { lat: 37.5572, lng: 126.9236, level: 5 },
+  신촌:       { lat: 37.5574, lng: 126.9370, level: 5 },
+  노량진:     { lat: 37.5132, lng: 126.9423, level: 5 },
   흑석:       { lat: 37.5093, lng: 126.9609, level: 5 },
-  // 도심
   시청:       { lat: 37.5632, lng: 126.9773, level: 5 },
   광화문:     { lat: 37.5709, lng: 126.9759, level: 5 },
-  종로:       { lat: 37.5694, lng: 126.9852, level: 5 },  // 마디그라·몽롱종각 중간
+  종로:       { lat: 37.5694, lng: 126.9852, level: 5 },
   동대문:     { lat: 37.5658, lng: 127.0070, level: 5 },
-  을지로:     { lat: 37.5636, lng: 126.9942, level: 5 },  // 우프라운지·OB베어 중간
-  // 북부·동북
-  성신여대:   { lat: 37.5921, lng: 127.0165, level: 5 },  // 성신여대입구역
-  노원:       { lat: 37.6541, lng: 127.0571, level: 5 },  // 노원역
-  // 동남·강남
-  이태원:     { lat: 37.5321, lng: 126.9953, level: 5 },  // 샘라이언스·제이알펍 중간
-  논현:       { lat: 37.5159, lng: 127.0279, level: 5 },  // 논현역
-  강남:       { lat: 37.5125, lng: 127.0588, level: 5 },  // 코엑스 기준
-  선릉:       { lat: 37.5044, lng: 127.0489, level: 5 },  // 선릉역
-  잠실:       { lat: 37.5133, lng: 127.1000, level: 5 },  // 잠실역
-  // 남부
+  을지로:     { lat: 37.5636, lng: 126.9942, level: 5 },
+  성신여대:   { lat: 37.5921, lng: 127.0165, level: 5 },
+  노원:       { lat: 37.6541, lng: 127.0571, level: 5 },
+  이태원:     { lat: 37.5321, lng: 126.9953, level: 5 },
+  논현:       { lat: 37.5159, lng: 127.0279, level: 5 },
+  강남:       { lat: 37.5125, lng: 127.0588, level: 5 },
+  선릉:       { lat: 37.5044, lng: 127.0489, level: 5 },
+  잠실:       { lat: 37.5133, lng: 127.1000, level: 5 },
   사당:       { lat: 37.4877, lng: 126.9854, level: 5 },
-  서울대입구: { lat: 37.4816, lng: 126.9527, level: 5 },  // 펍어스·호리도 중간
+  서울대입구: { lat: 37.4816, lng: 126.9527, level: 5 },
 };

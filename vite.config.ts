@@ -11,6 +11,18 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // React core — changes rarely, cache aggressively
+            vendor: ['react', 'react-dom'],
+          },
+        },
+      },
+      // Raise the chunk-size warning threshold (default 500kB)
+      chunkSizeWarningLimit: 600,
+    },
     server: {
       port: 3000,
       host: '0.0.0.0',

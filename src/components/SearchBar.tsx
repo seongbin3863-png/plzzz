@@ -16,9 +16,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({ value, onChange }) => (
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder="응원 스팟 또는 지역 검색"
-      className="w-full pl-8 pr-7 py-1.5 text-[11.5px] bg-black/35 border border-white/12
+      autoComplete="off"
+      autoCorrect="off"
+      spellCheck={false}
+      className="w-full pl-8 pr-7 py-2.5 text-[13px] bg-black/35 border border-white/12
         rounded-lg text-white placeholder-white/32 focus:outline-none focus:border-red-500/55
-        transition-colors duration-150"
+        transition-colors duration-150 min-h-[44px]"
     />
     {value && (
       <button
