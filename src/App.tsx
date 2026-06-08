@@ -798,6 +798,60 @@ const PlaceList = React.memo(function PlaceList({ places, onSelect, favorites, o
   );
 });
 
+// ── 위치 사용 안내 카드 ────────────────────────────────────────
+function LocationPrompt({ onAllow, onDismiss }: { onAllow: () => void; onDismiss: () => void }) {
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-[900] pointer-events-none">
+      <div
+        className="pointer-events-auto mx-auto max-w-sm px-4"
+        style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom, 20px))' }}
+      >
+        <div
+          className="bottom-sheet rounded-2xl"
+          style={{
+            background: 'rgba(10,0,0,0.97)',
+            border: '1px solid rgba(255,255,255,0.13)',
+            boxShadow: '0 -4px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04)',
+          }}
+        >
+          <div className="px-5 pt-5 pb-2">
+            <div className="flex items-start gap-3.5">
+              <div className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-2xl"
+                style={{ background: 'rgba(220,38,38,0.18)', border: '1px solid rgba(220,38,38,0.25)' }}>
+                ⚽
+              </div>
+              <div>
+                <p className="text-[15px] font-black text-white leading-snug mb-1.5">
+                  내 주변 응원 스팟을 찾아볼까요?
+                </p>
+                <p className="text-[12px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.50)' }}>
+                  현재 위치를 사용하면 가장 가까운<br />응원 장소를 바로 확인할 수 있어요.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 px-5 pt-3 pb-5">
+            <button
+              onClick={onAllow}
+              className="flex-1 text-white font-black text-[13px] rounded-xl py-3 transition-all active:scale-[0.97]"
+              style={{ background: '#DC2626' }}
+            >
+              📍 위치 사용하기
+            </button>
+            <button
+              onClick={onDismiss}
+              className="shrink-0 px-4 py-3 font-bold text-[13px] transition-colors"
+              style={{ color: 'rgba(255,255,255,0.35)' }}
+            >
+              나중에
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [countdown, setCountdown] = useState(getCountdown);
   const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
@@ -806,6 +860,40 @@ export default function App() {
   const [infoOpen, setInfoOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [focusCoords, setFocusCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+
+  // 위치 안내 프롬프트 — 최초 방문 시 1회 표시
+  useEffect(() => {
+    if (!localStorage.getItem('hasSeenLocationPrompt')) {
+      const t = setTimeout(() => setShowLocationPrompt(true), 700);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  const doGeolocate = useCallback(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserLocation(loc);
+        setFocusCoords(loc);
+      },
+      () => { /* 권한 거부 또는 오류 — 조용히 무시 */ },
+      { enableHighAccuracy: false, timeout: 10000 }
+    );
+  }, []);
+
+  const handleAllowLocation = useCallback(() => {
+    localStorage.setItem('hasSeenLocationPrompt', 'true');
+    setShowLocationPrompt(false);
+    doGeolocate();
+  }, [doGeolocate]);
+
+  const handleDismissLocation = useCallback(() => {
+    localStorage.setItem('hasSeenLocationPrompt', 'true');
+    setShowLocationPrompt(false);
+  }, []);
 
   // 찜한 스팟 — localStorage 영속
   const [favorites, setFavorites] = useState<Set<string>>(() => {
@@ -1112,7 +1200,7 @@ export default function App() {
               className="text-[11px] font-black text-white tracking-tight"
               style={{ textShadow: '0 1px 12px rgba(0,0,0,0.98)' }}
             >
-              서울 전역 응원 스팟 모음
+              서울 전역 응원스팟 모음
             </p>
             <p className="text-[8px] text-white/30 uppercase tracking-[0.2em] font-bold pb-0.5">
               FIFA World Cup 2026
@@ -1216,7 +1304,7 @@ export default function App() {
             <div className={`flex-1 min-h-0 lg:border-x-2 lg:border-b-2 border-red-400/48
               lg:rounded-t-none overflow-hidden relative
               ${(listView || infoOpen) ? 'hidden lg:flex lg:flex-col' : 'flex flex-col'}`}>
-              <MapView places={displayedSpots} mapCenter={mapCenter} focusCoords={focusCoords} onPlaceSelect={handlePlaceSelect} />
+              <MapView places={displayedSpots} mapCenter={mapCenter} focusCoords={focusCoords} onPlaceSelect={handlePlaceSelect} userLocation={userLocation} />
 
               {/* 지역 필터 오버레이 — 데스크탑만 */}
               <div className="hidden lg:block absolute top-2.5 left-2.5 right-2.5 pointer-events-none" style={{ zIndex: 200 }}>
@@ -1225,6 +1313,25 @@ export default function App() {
                   <RegionFilter regions={REGIONS} selected={selectedRegion} onSelect={handleRegionSelect} />
                 </div>
               </div>
+
+              {/* 내 위치 버튼 — 항상 표시 */}
+              <button
+                onClick={doGeolocate}
+                className="absolute bottom-4 right-4 flex items-center gap-1.5 font-bold text-[12px] rounded-xl px-3.5 py-2.5 transition-all active:scale-[0.95]"
+                style={{
+                  zIndex: 200,
+                  background: 'rgba(0,0,0,0.78)',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
+                  color: userLocation ? '#60A5FA' : 'rgba(255,255,255,0.85)',
+                }}
+                aria-label="내 위치로 이동"
+              >
+                <span className="text-[15px]">📍</span>
+                내 위치
+              </button>
 
               {/* 검색 결과 없음 */}
               {displayedSpots.length === 0 && debouncedSearch.trim() && (
@@ -1313,6 +1420,11 @@ export default function App() {
         onClose={() => setReportOpen(false)}
         regions={REGIONS}
       />
+
+      {/* 위치 사용 안내 프롬프트 — 최초 방문 시 */}
+      {showLocationPrompt && (
+        <LocationPrompt onAllow={handleAllowLocation} onDismiss={handleDismissLocation} />
+      )}
 
       {/* 공유/찜 토스트 */}
       {toast && (

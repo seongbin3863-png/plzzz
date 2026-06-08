@@ -25,6 +25,7 @@ interface MapViewProps {
   mapCenter?: MapCenter | null;
   focusCoords?: { lat: number; lng: number } | null;
   onPlaceSelect?: (place: Place | null) => void;
+  userLocation?: { lat: number; lng: number } | null;
 }
 
 declare global {
@@ -47,12 +48,13 @@ const MARKER_SVG = encodeURIComponent(`
   </svg>
 `);
 
-const MapViewBase: React.FC<MapViewProps> = ({ places, mapCenter, focusCoords, onPlaceSelect }) => {
+const MapViewBase: React.FC<MapViewProps> = ({ places, mapCenter, focusCoords, onPlaceSelect, userLocation }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const kakaoMapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const currentInfoWindowRef = useRef<any>(null);
   const mapCenterRef = useRef<MapCenter | null>(null);
+  const userLocationOverlayRef = useRef<any>(null);
 
   const [isKakaoLoaded, setIsKakaoLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -221,6 +223,36 @@ const MapViewBase: React.FC<MapViewProps> = ({ places, mapCenter, focusCoords, o
     );
     kakaoMapRef.current.setLevel(4);
   }, [isKakaoLoaded, focusCoords]);
+
+  // ── Effect 6: 내 위치 파란 점 오버레이 ───────────────────────
+  useEffect(() => {
+    if (!isKakaoLoaded || !kakaoMapRef.current) return;
+
+    if (userLocationOverlayRef.current) {
+      userLocationOverlayRef.current.setMap(null);
+      userLocationOverlayRef.current = null;
+    }
+    if (!userLocation) return;
+
+    const el = document.createElement('div');
+    el.innerHTML = `
+      <div style="position:relative;width:20px;height:20px;pointer-events:none;">
+        <div class="user-loc-pulse" style="position:absolute;inset:-7px;border-radius:50%;background:rgba(37,99,235,0.22);"></div>
+        <div style="position:absolute;inset:0;background:#2563EB;border-radius:50%;border:2.5px solid white;box-shadow:0 2px 10px rgba(0,0,0,0.4);"></div>
+        <div style="position:absolute;top:5px;left:5px;right:5px;bottom:5px;background:rgba(255,255,255,0.88);border-radius:50%;"></div>
+      </div>
+    `;
+
+    const overlay = new window.kakao.maps.CustomOverlay({
+      position: new window.kakao.maps.LatLng(userLocation.lat, userLocation.lng),
+      content: el,
+      zIndex: 10,
+      yAnchor: 0.5,
+      xAnchor: 0.5,
+    });
+    overlay.setMap(kakaoMapRef.current);
+    userLocationOverlayRef.current = overlay;
+  }, [isKakaoLoaded, userLocation]);
 
   // ── 가상 지도 fallback (API 키 없을 때) ───────────────────────
   const [zoomLevel, setZoomLevel] = useState(3);
