@@ -343,48 +343,32 @@ const PlaceSheet = React.memo(function PlaceSheet({ place, onClose, onSelectPlac
       >
         <div className="h-full bg-[#0f0f0f] rounded-t-3xl shadow-2xl flex flex-col overflow-hidden border-t border-white/8">
 
-          {/* ── 드래그 핸들 ── */}
+          {/* ── 드래그 핸들 + 닫기 ── */}
           <div
-            className="shrink-0 flex flex-col items-center pt-3 pb-2 cursor-grab active:cursor-grabbing touch-none select-none"
+            className="shrink-0 flex items-center pt-3 pb-2 px-4 cursor-grab active:cursor-grabbing touch-none select-none"
             onPointerDown={onHandleDown}
             onPointerMove={onHandleMove}
             onPointerUp={onHandleUp}
             onPointerCancel={onHandleUp}
           >
-            <div className="w-9 h-1.5 rounded-full bg-white/20" />
+            <div className="flex-1 flex justify-center">
+              <div className="w-9 h-1.5 rounded-full bg-white/20" />
+            </div>
+            <button
+              onClick={onClose}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="pointer-events-auto w-8 h-8 flex items-center justify-center
+                rounded-full bg-white/10 text-white/50 text-[14px] active:opacity-60 shrink-0"
+            >
+              ✕
+            </button>
           </div>
 
           {/* ── 스크롤 콘텐츠 ── */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
 
-            {/* 히어로 이미지 */}
-            <div className="relative w-full bg-gradient-to-br from-red-950/50 via-black/80 to-black"
-              style={{ height: '175px', minHeight: '175px' }}>
-              {(place as any).images?.[0] ? (
-                <img
-                  src={(place as any).images[0]}
-                  alt={place.name}
-                  loading="lazy"
-                  decoding="async"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/15">
-                  <span style={{ fontSize: '54px', lineHeight: 1 }}>⚽</span>
-                  <span className="text-[11px] font-black tracking-[0.25em] uppercase">응원 스팟</span>
-                </div>
-              )}
-              {/* 닫기 */}
-              <button onClick={onClose}
-                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center
-                  rounded-full bg-black/60 backdrop-blur-sm text-white/60 text-[14px] active:opacity-60 z-10">
-                ✕
-              </button>
-            </div>
-
             {/* ── 기본 정보 ── */}
-            <div className="px-5 pt-4">
+            <div className="px-5 pt-2">
               <span className="inline-block text-[11px] bg-red-600 text-white
                 px-2.5 py-0.5 rounded-md font-black tracking-wide mb-2">
                 {place.region}
