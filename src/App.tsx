@@ -278,11 +278,14 @@ const HotNowPanel = React.memo(function HotNowPanel({ hotSpots, onSelect }: { ho
 // 스냅 포인트: 38vh (기본) → 65vh (근처 스팟) → 90vh (전체)
 const SNAP_VH = [38, 65, 90];
 
-const PlaceSheet = React.memo(function PlaceSheet({ place, onClose, onSelectPlace, allSpots }: {
+const PlaceSheet = React.memo(function PlaceSheet({ place, onClose, onSelectPlace, allSpots, favorites, onToggleFavorite, onShare }: {
   place: Place | null;
   onClose: () => void;
   onSelectPlace: (p: Place) => void;
   allSpots: Place[];
+  favorites: Set<string>;
+  onToggleFavorite: (id: string) => void;
+  onShare: (place: Place) => void;
 }) {
   const [snapIdx, setSnapIdx] = React.useState(0);
   const [dragOffset, setDragOffset] = React.useState(0);
@@ -376,9 +379,28 @@ const PlaceSheet = React.memo(function PlaceSheet({ place, onClose, onSelectPlac
               <h2 className="text-[24px] font-black text-white leading-tight tracking-tight mb-2">
                 {place.name}
               </h2>
-              <div className="flex items-start gap-2 pb-4 border-b border-white/8">
+              <div className="flex items-start gap-2 pb-3 border-b border-white/8">
                 <span className="text-[14px] mt-0.5 shrink-0">📍</span>
                 <p className="text-[13px] text-white/50 leading-relaxed">{place.address}</p>
+              </div>
+
+              {/* ❤️ 찜하기 + 🔗 공유하기 */}
+              <div className="flex gap-2 py-3 border-b border-white/8">
+                <button
+                  onClick={() => onToggleFavorite(place.id)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 h-[44px] rounded-xl border font-bold text-[13px] active:opacity-60 transition-all
+                    ${favorites.has(place.id)
+                      ? 'bg-red-500/20 border-red-500/40 text-red-400'
+                      : 'bg-white/6 border-white/12 text-white/55'}`}
+                >
+                  {favorites.has(place.id) ? '❤️ 찜됨' : '🤍 찜하기'}
+                </button>
+                <button
+                  onClick={() => onShare(place)}
+                  className="flex-1 flex items-center justify-center gap-1.5 h-[44px] rounded-xl border font-bold text-[13px] bg-white/6 border-white/12 text-white/55 active:opacity-60"
+                >
+                  🔗 공유하기
+                </button>
               </div>
 
               {/* 화면 종류 */}
@@ -454,29 +476,6 @@ const PlaceSheet = React.memo(function PlaceSheet({ place, onClose, onSelectPlac
                     </div>
                   </div>
                 )}
-
-                {/* 향후 기능 플레이스홀더 */}
-                <div className="pb-6 border-t border-white/8 pt-4">
-                  <p className="text-[11px] font-black text-white/35 uppercase tracking-[0.18em] mb-3">
-                    ✨ 곧 출시
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { icon: '⚽', label: '곧 가요', desc: '출발 예정 표시' },
-                      { icon: '🔥', label: '응원중', desc: '실시간 응원 현황' },
-                      { icon: '📸', label: '인증 사진', desc: '응원 사진 공유' },
-                      { icon: '➕', label: '스팟 제보', desc: '새 장소 제보하기' },
-                    ].map((f, i) => (
-                      <div key={i}
-                        className="flex flex-col bg-white/4 border border-dashed border-white/10
-                          rounded-2xl px-3 py-3.5 opacity-55 cursor-not-allowed select-none">
-                        <span className="text-[26px] mb-1.5 leading-none">{f.icon}</span>
-                        <p className="text-[13px] font-bold text-white">{f.label}</p>
-                        <p className="text-[11px] text-white/35 mt-0.5">{f.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
 
                 <div className="h-6" />
               </div>
@@ -616,10 +615,126 @@ function ReportSheet({ open, onClose, regions }: {
   );
 }
 
+// ── MobileInfoPanel (정보 탭) ────────────────────────────────────
+const KOREA_MATCHES = FIXTURES.filter(f => f.featured);
+const OTHER_MATCHES = FIXTURES.filter(f => !f.featured).slice(0, 4);
+
+const MobileInfoPanel = React.memo(function MobileInfoPanel({
+  favorites,
+  allSpots,
+  onToggleFavorite,
+  onOpenSpot,
+  onOpenReport,
+}: {
+  favorites: Set<string>;
+  allSpots: Place[];
+  onToggleFavorite: (id: string) => void;
+  onOpenSpot: (p: Place) => void;
+  onOpenReport: () => void;
+}) {
+  const favSpots = allSpots.filter(s => favorites.has(s.id));
+
+  return (
+    <div className="flex flex-col pb-10" style={{ background: '#0d0000', minHeight: '100%' }}>
+
+      {/* ❤️ 찜한 스팟 */}
+      <section className="px-4 pt-5 pb-5 border-b border-white/8">
+        <div className="flex items-center gap-2 mb-3">
+          <h3 className="text-[13px] font-black text-white tracking-wide">❤️ 찜한 스팟</h3>
+          {favSpots.length > 0 && (
+            <span className="text-[11px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full leading-none">
+              {favSpots.length}
+            </span>
+          )}
+        </div>
+        {favSpots.length === 0 ? (
+          <div className="flex flex-col items-center py-7 rounded-2xl border border-dashed border-white/10">
+            <span className="text-[28px] mb-2">🤍</span>
+            <p className="text-[13px] text-white/40 font-semibold">아직 찜한 스팟이 없어요</p>
+            <p className="text-[11px] text-white/25 mt-1">장소 상세에서 ❤️ 를 눌러 저장하세요</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {favSpots.map(s => (
+              <div key={s.id}
+                className="flex items-center gap-3 bg-white/5 border border-white/8 rounded-2xl px-4 py-3 min-h-[64px]"
+              >
+                <button onClick={() => onOpenSpot(s)} className="flex-1 min-w-0 text-left active:opacity-70">
+                  <p className="text-[10px] font-black text-red-400 mb-0.5">{s.region}</p>
+                  <p className="text-[15px] font-bold text-white leading-tight truncate">{s.name}</p>
+                  <p className="text-[11px] text-white/35 truncate mt-0.5">{s.address}</p>
+                </button>
+                <button
+                  onClick={() => onToggleFavorite(s.id)}
+                  className="shrink-0 w-10 h-10 flex items-center justify-center text-[20px] rounded-full active:bg-white/10 transition-colors"
+                  aria-label="찜 해제"
+                >
+                  ❤️
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* 📅 경기 일정 */}
+      <section className="px-4 pt-5 pb-5 border-b border-white/8">
+        <h3 className="text-[13px] font-black text-white tracking-wide mb-3">📅 경기 일정</h3>
+
+        {/* 한국 경기 강조 */}
+        {KOREA_MATCHES.map((f, i) => (
+          <div key={i} className="rounded-2xl px-4 py-3.5 bg-red-950/55 border border-red-500/35 mb-2.5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-black text-red-400 tracking-wider">🇰🇷 KOREA MATCH</span>
+              <span className="text-[10px] text-white/35 font-mono">{fmtDate(f.date)} {f.time} KST</span>
+            </div>
+            <p className="text-[16px] font-black text-white">
+              {flagEmoji(f.homeFlag)} {f.home} <span className="text-white/30 font-normal text-[14px]">vs</span> {f.away} {flagEmoji(f.awayFlag)}
+            </p>
+          </div>
+        ))}
+
+        {/* 기타 경기 */}
+        <div className="flex flex-col gap-2">
+          {OTHER_MATCHES.map((f, i) => (
+            <div key={i} className="rounded-xl px-4 py-2.5 bg-white/4 border border-white/8">
+              <div className="flex items-center justify-between">
+                <p className="text-[13px] font-semibold text-white/65">
+                  {flagEmoji(f.homeFlag)} {f.home} <span className="text-white/25">vs</span> {f.away} {flagEmoji(f.awayFlag)}
+                </p>
+                <span className="text-[10px] text-white/30 font-mono shrink-0 ml-2">{f.time}</span>
+              </div>
+              <p className="text-[10px] text-white/25 mt-0.5">{fmtDate(f.date)}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 📍 스팟 제보 */}
+      <section className="px-4 pt-5">
+        <h3 className="text-[13px] font-black text-white tracking-wide mb-2">📍 응원 스팟 제보</h3>
+        <p className="text-[12px] text-white/40 leading-relaxed mb-4">
+          아직 지도에 없는 응원 스팟을 알고 계신가요?<br />
+          제보해 주시면 검토 후 등록합니다.
+        </p>
+        <button
+          onClick={onOpenReport}
+          className="w-full py-4 bg-red-600 text-white font-black text-[15px] rounded-2xl active:opacity-80 transition-colors"
+        >
+          ➕ 스팟 제보하기
+        </button>
+      </section>
+    </div>
+  );
+});
+
 // ── PlaceList (목록 보기 — 모바일 전용) ──────────────────────────
-const PlaceList = React.memo(function PlaceList({ places, onSelect }: {
+const PlaceList = React.memo(function PlaceList({ places, onSelect, favorites, onToggleFavorite, onShare }: {
   places: Place[];
   onSelect: (place: Place) => void;
+  favorites: Set<string>;
+  onToggleFavorite: (id: string) => void;
+  onShare: (place: Place) => void;
 }) {
   if (places.length === 0) {
     return (
@@ -651,7 +766,22 @@ const PlaceList = React.memo(function PlaceList({ places, onSelect }: {
               <p className="text-[16px] font-black text-white leading-tight truncate">{place.name}</p>
               <p className="text-[12px] text-white/45 mt-0.5 truncate">{place.address}</p>
             </div>
-            <span className="text-white/20 text-[20px] shrink-0 mt-1">›</span>
+            <div className="flex flex-col items-center gap-0.5 shrink-0">
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleFavorite(place.id); }}
+                className="w-9 h-9 flex items-center justify-center text-[18px] rounded-full active:bg-white/10 transition-colors"
+                aria-label="찜하기"
+              >
+                {favorites.has(place.id) ? '❤️' : '🤍'}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onShare(place); }}
+                className="w-9 h-9 flex items-center justify-center text-[14px] rounded-full active:bg-white/10 transition-colors"
+                aria-label="공유하기"
+              >
+                🔗
+              </button>
+            </div>
           </div>
           {place.tags.length > 0 && (
             <div className="flex gap-1.5 mt-2 flex-wrap">
@@ -673,7 +803,40 @@ export default function App() {
   const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
   const [mobilePlace, setMobilePlace] = useState<Place | null>(null);
   const [listView, setListView] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [focusCoords, setFocusCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  // 찜한 스팟 — localStorage 영속
+  const [favorites, setFavorites] = useState<Set<string>>(() => {
+    try {
+      const s = localStorage.getItem('wm-favorites');
+      return s ? new Set(JSON.parse(s) as string[]) : new Set<string>();
+    } catch { return new Set<string>(); }
+  });
+  const toggleFavorite = useCallback((id: string) => {
+    setFavorites(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      try { localStorage.setItem('wm-favorites', JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }, []);
+
+  // 공유 + 토스트
+  const [toast, setToast] = useState<string | null>(null);
+  const shareSpot = useCallback(async (place: Place) => {
+    const text = `월드컵 응원 여기서 보자 ⚽\n${place.name}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: place.name, text, url: place.mapUrl });
+      } else {
+        await navigator.clipboard.writeText(`${text}\n${place.mapUrl}`);
+        setToast('링크가 복사되었습니다 🔗');
+        setTimeout(() => setToast(null), 2200);
+      }
+    } catch { /* 사용자 취소 등 무시 */ }
+  }, []);
   // 세션 조회수 — 마커/목록 클릭 시 +1 (향후 DB 연동 시 교체)
   const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
 
@@ -725,8 +888,8 @@ export default function App() {
 
   const handleRegionSelect = useCallback((region: string) => {
     setSelectedRegion(region);
-    // 지도 이동 우선 — 목록 뷰 전환 없이 지도에서 핀 확인
     setListView(false);
+    setInfoOpen(false);
   }, []);
 
   const handlePlaceSelect = useCallback((p: Place | null) => {
@@ -1049,10 +1212,10 @@ export default function App() {
               <SearchBar value={searchInput} onChange={setSearchInput} />
             </div>
 
-            {/* 지도 — 목록보기 시 모바일에서 숨김 */}
+            {/* 지도 — 목록/정보 탭에서 숨김 */}
             <div className={`flex-1 min-h-0 lg:border-x-2 lg:border-b-2 border-red-400/48
               lg:rounded-t-none overflow-hidden relative
-              ${listView ? 'hidden lg:flex lg:flex-col' : 'flex flex-col'}`}>
+              ${(listView || infoOpen) ? 'hidden lg:flex lg:flex-col' : 'flex flex-col'}`}>
               <MapView places={displayedSpots} mapCenter={mapCenter} focusCoords={focusCoords} onPlaceSelect={handlePlaceSelect} />
 
               {/* 지역 필터 오버레이 — 데스크탑만 */}
@@ -1075,9 +1238,28 @@ export default function App() {
             </div>
 
             {/* 목록 보기 — 모바일 전용 */}
-            {listView && (
+            {listView && !infoOpen && (
               <div className="lg:hidden flex-1 min-h-0 overflow-y-auto" style={{ background: '#0d0000' }}>
-                <PlaceList places={displayedSpots} onSelect={handleListSelect} />
+                <PlaceList
+                  places={displayedSpots}
+                  onSelect={handleListSelect}
+                  favorites={favorites}
+                  onToggleFavorite={toggleFavorite}
+                  onShare={shareSpot}
+                />
+              </div>
+            )}
+
+            {/* 정보 탭 — 모바일 전용 */}
+            {infoOpen && (
+              <div className="lg:hidden flex-1 min-h-0 overflow-y-auto" style={{ background: '#0d0000' }}>
+                <MobileInfoPanel
+                  favorites={favorites}
+                  allSpots={spots as unknown as Place[]}
+                  onToggleFavorite={toggleFavorite}
+                  onOpenSpot={(p) => { setMobilePlace(p); }}
+                  onOpenReport={() => setReportOpen(true)}
+                />
               </div>
             )}
 
@@ -1091,32 +1273,55 @@ export default function App() {
         onClose={handlePlaceClose}
         onSelectPlace={handlePlaceSelectFromSheet}
         allSpots={spots as unknown as Place[]}
+        favorites={favorites}
+        onToggleFavorite={toggleFavorite}
+        onShare={shareSpot}
       />
 
       {/* 모바일 하단 탭 바 */}
       <nav className="lg:hidden shrink-0 flex items-stretch bg-[#0d0000]/98 border-t border-white/10 mobile-bottom-nav"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <button
-          onClick={() => setListView(false)}
+          onClick={() => { setListView(false); setInfoOpen(false); }}
           className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px]
-            transition-colors ${!listView ? 'text-red-500' : 'text-white/35'}`}
+            transition-colors ${!listView && !infoOpen ? 'text-red-500' : 'text-white/35'}`}
         >
           <span className="text-[22px]">🗺️</span>
           <span className="text-[10px] font-bold tracking-wide">지도</span>
         </button>
         <button
-          onClick={() => setListView(true)}
+          onClick={() => { setListView(true); setInfoOpen(false); }}
           className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px]
-            transition-colors ${listView ? 'text-red-500' : 'text-white/35'}`}
+            transition-colors ${listView && !infoOpen ? 'text-red-500' : 'text-white/35'}`}
         >
           <span className="text-[22px]">⚽</span>
           <span className="text-[10px] font-bold tracking-wide">응원 스팟</span>
         </button>
-        <button className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] text-white/35">
+        <button
+          onClick={() => { setInfoOpen(true); setListView(false); }}
+          className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px]
+            transition-colors ${infoOpen ? 'text-red-500' : 'text-white/35'}`}
+        >
           <span className="text-[22px]">ℹ️</span>
           <span className="text-[10px] font-bold tracking-wide">정보</span>
         </button>
       </nav>
+
+      {/* 스팟 제보 모달 */}
+      <ReportSheet
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        regions={REGIONS}
+      />
+
+      {/* 공유/찜 토스트 */}
+      {toast && (
+        <div className="lg:hidden fixed bottom-24 left-4 right-4 z-[800] flex justify-center pointer-events-none">
+          <div className="bg-zinc-800/95 text-white text-[13px] font-bold px-5 py-2.5 rounded-full shadow-xl border border-white/10 backdrop-blur-sm">
+            {toast}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
