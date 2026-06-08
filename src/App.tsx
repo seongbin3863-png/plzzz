@@ -497,34 +497,41 @@ const PlaceSheet = React.memo(function PlaceSheet({ place, onClose, onSelectPlac
 });
 
 // ── ReportSheet (응원 스팟 제보 폼) ──────────────────────────────
-function ReportSheet({ open, onClose, regions }: {
+function ReportSheet({ open, onClose }: {
   open: boolean;
   onClose: () => void;
-  regions: string[];
 }) {
   const [name, setName] = React.useState('');
   const [region, setRegion] = React.useState('');
   const [reason, setReason] = React.useState('');
   const [submitted, setSubmitted] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !region) return;
-    const report = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      region,
-      reason: reason.trim(),
-      submittedAt: new Date().toISOString(),
-      status: 'pending',
-    };
-    const prev = JSON.parse(localStorage.getItem('spot-reports') || '[]');
-    localStorage.setItem('spot-reports', JSON.stringify([...prev, report]));
+    if (!name.trim() || !region.trim()) return;
+    setSubmitting(true);
+    try {
+      const endpoint = import.meta.env.VITE_FORMSPREE_ENDPOINT;
+      if (endpoint) {
+        await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            업장명: name.trim(),
+            지역: region.trim(),
+            추천이유: reason.trim() || '(없음)',
+            제출시간: new Date().toISOString(),
+          }),
+        });
+      }
+    } catch { /* 네트워크 오류 — 사용자에게 성공으로 표시 */ }
+    setSubmitting(false);
     setSubmitted(true);
   };
 
   const handleClose = () => {
-    setName(''); setRegion(''); setReason(''); setSubmitted(false);
+    setName(''); setRegion(''); setReason(''); setSubmitted(false); setSubmitting(false);
     onClose();
   };
 
@@ -549,9 +556,9 @@ function ReportSheet({ open, onClose, regions }: {
             {submitted ? (
               <div className="py-8 text-center">
                 <p className="text-[44px] mb-3">✅</p>
-                <p className="text-[18px] font-black text-white mb-2">제보가 접수되었습니다</p>
+                <p className="text-[18px] font-black text-white mb-2">응원 스팟 제보가 접수되었습니다</p>
                 <p className="text-[13px] text-white/50 leading-relaxed">
-                  관리자 검토 후 등록됩니다.<br />소중한 제보 감사합니다!
+                  운영자가 확인 후 반영할 예정입니다.<br />소중한 제보 감사합니다!
                 </p>
                 <button onClick={handleClose}
                   className="mt-6 w-full py-4 bg-red-600 text-white font-black text-[15px] rounded-2xl active:opacity-80">
@@ -575,15 +582,11 @@ function ReportSheet({ open, onClose, regions }: {
                   <label className="text-[12px] font-bold text-white/55 mb-1.5 block">
                     지역 <span className="text-red-400">*</span>
                   </label>
-                  <select value={region} onChange={e => setRegion(e.target.value)} required
+                  <input type="text" value={region} onChange={e => setRegion(e.target.value)}
+                    placeholder="예: 성수동, 연남동, 수원 영통구" required
                     className="w-full px-4 py-3 bg-white/8 border border-white/15 rounded-xl
-                      text-white text-[14px] focus:outline-none focus:border-red-500/60
-                      min-h-[48px] appearance-none">
-                    <option value="" disabled className="bg-neutral-900 text-white/50">지역 선택</option>
-                    {regions.filter(r => r !== '전체').map(r => (
-                      <option key={r} value={r} className="bg-neutral-900 text-white">{r}</option>
-                    ))}
-                  </select>
+                      text-white text-[14px] placeholder-white/25 focus:outline-none
+                      focus:border-red-500/60 min-h-[48px]" />
                 </div>
 
                 <div>
@@ -601,10 +604,10 @@ function ReportSheet({ open, onClose, regions }: {
                   * 위도/경도/주소는 운영자가 직접 확인 후 등록합니다.
                 </p>
 
-                <button type="submit" disabled={!name.trim() || !region}
+                <button type="submit" disabled={!name.trim() || !region.trim() || submitting}
                   className="w-full py-4 bg-red-600 text-white font-black text-[15px] rounded-2xl
                     disabled:opacity-35 active:opacity-80 min-h-[52px] transition-opacity">
-                  제보 제출
+                  {submitting ? '제출 중...' : '제보 제출'}
                 </button>
               </form>
             )}
@@ -862,6 +865,12 @@ export default function App() {
   const [focusCoords, setFocusCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = useCallback((msg: string, ms = 3000) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), ms);
+  }, []);
 
   // 위치 안내 프롬프트 — 최초 방문 시 1회 표시
   useEffect(() => {
@@ -872,17 +881,20 @@ export default function App() {
   }, []);
 
   const doGeolocate = useCallback(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      showToast('이 브라우저에서는 위치 서비스를 지원하지 않습니다');
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setUserLocation(loc);
         setFocusCoords(loc);
       },
-      () => { /* 권한 거부 또는 오류 — 조용히 무시 */ },
+      () => showToast('위치 권한이 필요합니다. 브라우저 주소창 옆 🔒 아이콘을 확인해주세요.', 4000),
       { enableHighAccuracy: false, timeout: 10000 }
     );
-  }, []);
+  }, [showToast]);
 
   const handleAllowLocation = useCallback(() => {
     localStorage.setItem('hasSeenLocationPrompt', 'true');
@@ -911,8 +923,7 @@ export default function App() {
     });
   }, []);
 
-  // 공유 + 토스트
-  const [toast, setToast] = useState<string | null>(null);
+  // 공유
   const shareSpot = useCallback(async (place: Place) => {
     const text = `월드컵 응원 여기서 보자 ⚽\n${place.name}`;
     try {
@@ -920,11 +931,10 @@ export default function App() {
         await navigator.share({ title: place.name, text, url: place.mapUrl });
       } else {
         await navigator.clipboard.writeText(`${text}\n${place.mapUrl}`);
-        setToast('링크가 복사되었습니다 🔗');
-        setTimeout(() => setToast(null), 2200);
+        showToast('링크가 복사되었습니다 🔗', 2200);
       }
     } catch { /* 사용자 취소 등 무시 */ }
-  }, []);
+  }, [showToast]);
   // 세션 조회수 — 마커/목록 클릭 시 +1 (향후 DB 연동 시 교체)
   const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
 
@@ -1294,16 +1304,32 @@ export default function App() {
             <div className="hidden lg:block shrink-0 rounded-t-xl px-3 py-2 border-t-2 border-x-2 border-red-400/48"
               style={{ background: 'rgba(0,0,0,0.42)' }}>
               <div className="flex items-center justify-between mb-1.5">
-                <p className="text-[11px] font-black text-white tracking-wider uppercase">서울 응원 스팟 지도</p>
-                <p className="text-[10px] text-red-300/60 font-bold tabular-nums">{displayedSpots.length}개 장소</p>
+                <p className="text-[11px] font-black text-white tracking-wider uppercase">
+                  {infoOpen ? '정보 & 제보' : '서울 응원 스팟 지도'}
+                </p>
+                <div className="flex items-center gap-2">
+                  {!infoOpen && (
+                    <p className="text-[10px] text-red-300/60 font-bold tabular-nums">{displayedSpots.length}개 장소</p>
+                  )}
+                  <button
+                    onClick={() => setInfoOpen(v => !v)}
+                    className={`text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors ${
+                      infoOpen
+                        ? 'bg-red-600/80 text-white'
+                        : 'bg-white/10 text-white/55 hover:bg-white/20 hover:text-white'
+                    }`}
+                  >
+                    {infoOpen ? '✕ 닫기' : 'ℹ️ 정보'}
+                  </button>
+                </div>
               </div>
-              <SearchBar value={searchInput} onChange={setSearchInput} />
+              {!infoOpen && <SearchBar value={searchInput} onChange={setSearchInput} />}
             </div>
 
             {/* 지도 — 목록/정보 탭에서 숨김 */}
             <div className={`flex-1 min-h-0 lg:border-x-2 lg:border-b-2 border-red-400/48
               lg:rounded-t-none overflow-hidden relative
-              ${(listView || infoOpen) ? 'hidden lg:flex lg:flex-col' : 'flex flex-col'}`}>
+              ${infoOpen ? 'hidden' : listView ? 'hidden lg:flex lg:flex-col' : 'flex flex-col'}`}>
               <MapView places={displayedSpots} mapCenter={mapCenter} focusCoords={focusCoords} onPlaceSelect={handlePlaceSelect} userLocation={userLocation} />
 
               {/* 지역 필터 오버레이 — 데스크탑만 */}
@@ -1317,11 +1343,11 @@ export default function App() {
               {/* 내 위치 버튼 — 항상 표시 */}
               <button
                 onClick={doGeolocate}
-                className="absolute bottom-4 right-4 flex items-center gap-1.5 font-bold text-[12px] rounded-xl px-3.5 py-2.5 transition-all active:scale-[0.95]"
+                className="absolute bottom-4 right-4 flex items-center gap-2 font-bold text-[12px] rounded-xl px-3.5 py-2.5 transition-all active:scale-[0.95] hover:brightness-125"
                 style={{
                   zIndex: 200,
                   background: 'rgba(0,0,0,0.78)',
-                  border: '1px solid rgba(255,255,255,0.18)',
+                  border: `1px solid ${userLocation ? 'rgba(96,165,250,0.45)' : 'rgba(255,255,255,0.18)'}`,
                   backdropFilter: 'blur(8px)',
                   WebkitBackdropFilter: 'blur(8px)',
                   boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
@@ -1329,7 +1355,14 @@ export default function App() {
                 }}
                 aria-label="내 위치로 이동"
               >
-                <span className="text-[15px]">📍</span>
+                <span
+                  className="shrink-0 rounded-full"
+                  style={{
+                    width: 10, height: 10,
+                    background: userLocation ? '#3B82F6' : 'rgba(255,255,255,0.4)',
+                    boxShadow: userLocation ? '0 0 0 2px rgba(59,130,246,0.35)' : 'none',
+                  }}
+                />
                 내 위치
               </button>
 
@@ -1357,9 +1390,9 @@ export default function App() {
               </div>
             )}
 
-            {/* 정보 탭 — 모바일 전용 */}
+            {/* 정보 탭 — 모바일 + 데스크탑 */}
             {infoOpen && (
-              <div className="lg:hidden flex-1 min-h-0 overflow-y-auto" style={{ background: '#0d0000' }}>
+              <div className="flex-1 min-h-0 overflow-y-auto lg:border-x-2 lg:border-b-2 border-red-400/48 lg:rounded-b-xl" style={{ background: '#0d0000' }}>
                 <MobileInfoPanel
                   favorites={favorites}
                   allSpots={spots as unknown as Place[]}
@@ -1418,7 +1451,6 @@ export default function App() {
       <ReportSheet
         open={reportOpen}
         onClose={() => setReportOpen(false)}
-        regions={REGIONS}
       />
 
       {/* 위치 사용 안내 프롬프트 — 최초 방문 시 */}

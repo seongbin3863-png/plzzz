@@ -236,10 +236,9 @@ const MapViewBase: React.FC<MapViewProps> = ({ places, mapCenter, focusCoords, o
 
     const el = document.createElement('div');
     el.innerHTML = `
-      <div style="position:relative;width:20px;height:20px;pointer-events:none;">
-        <div class="user-loc-pulse" style="position:absolute;inset:-7px;border-radius:50%;background:rgba(37,99,235,0.22);"></div>
-        <div style="position:absolute;inset:0;background:#2563EB;border-radius:50%;border:2.5px solid white;box-shadow:0 2px 10px rgba(0,0,0,0.4);"></div>
-        <div style="position:absolute;top:5px;left:5px;right:5px;bottom:5px;background:rgba(255,255,255,0.88);border-radius:50%;"></div>
+      <div style="position:relative;width:16px;height:16px;pointer-events:none;">
+        <div class="user-loc-pulse" style="position:absolute;inset:-8px;border-radius:50%;background:rgba(59,130,246,0.2);"></div>
+        <div style="position:absolute;inset:0;background:#3B82F6;border-radius:50%;border:2.5px solid white;box-shadow:0 0 0 1px rgba(59,130,246,0.4),0 2px 8px rgba(0,0,0,0.5);"></div>
       </div>
     `;
 
