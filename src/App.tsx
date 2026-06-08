@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { spots, REGIONS, REGION_CENTERS } from './data/spots';
+import { spots, REGIONS, REGION_CENTERS, REGION_GROUPS } from './data/spots';
 import { MapView, type Place } from './components/MapView.tsx';
 import { SearchBar } from './components/SearchBar.tsx';
 import { RegionFilter } from './components/RegionFilter.tsx';
@@ -714,10 +714,11 @@ export default function App() {
     );
   }, [debouncedSearch]);
 
-  // 목록용 — 검색어 + 지역 필터 모두 적용
+  // 목록용 — 검색어 + 생활권 필터 모두 적용
   const listSpots = useMemo(() => {
     if (selectedRegion === '전체') return displayedSpots;
-    return displayedSpots.filter((spot) => spot.region === selectedRegion);
+    const members = REGION_GROUPS[selectedRegion] ?? [];
+    return displayedSpots.filter((spot) => members.includes(spot.region));
   }, [displayedSpots, selectedRegion]);
 
   // 지역 필터 → 지도 중심 이동 + 모바일에서는 목록 보기 전환
