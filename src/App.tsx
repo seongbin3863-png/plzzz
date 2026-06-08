@@ -1112,7 +1112,7 @@ export default function App() {
               className="text-[11px] font-black text-white tracking-tight"
               style={{ textShadow: '0 1px 12px rgba(0,0,0,0.98)' }}
             >
-              서울 전역 응원 스팟 {spots.length}곳
+              서울 전역 응원 스팟 모음
             </p>
             <p className="text-[8px] text-white/30 uppercase tracking-[0.2em] font-bold pb-0.5">
               FIFA World Cup 2026
