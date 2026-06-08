@@ -703,32 +703,30 @@ export default function App() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // 검색어 기반 마커 필터 (지도용 — 마커는 항상 전체 지역 표시)
+  // 검색어 + 생활권 필터 (지도 마커 · 목록 공용)
+  // 생활권 선택 시 해당 그룹 장소만 지도에 표시
   const displayedSpots = useMemo(() => {
     const q = debouncedSearch.toLowerCase().trim();
-    if (!q) return spots;
-    return spots.filter((spot) =>
-      spot.name.toLowerCase().includes(q) ||
-      spot.address.toLowerCase().includes(q) ||
-      spot.region.toLowerCase().includes(q)
-    );
-  }, [debouncedSearch]);
+    const members = selectedRegion !== '전체' ? (REGION_GROUPS[selectedRegion] ?? []) : null;
 
-  // 목록용 — 검색어 + 생활권 필터 모두 적용
-  const listSpots = useMemo(() => {
-    if (selectedRegion === '전체') return displayedSpots;
-    const members = REGION_GROUPS[selectedRegion] ?? [];
-    return displayedSpots.filter((spot) => members.includes(spot.region));
-  }, [displayedSpots, selectedRegion]);
+    return spots.filter((spot) => {
+      if (members && !members.includes(spot.region)) return false;
+      if (!q) return true;
+      return (
+        spot.name.toLowerCase().includes(q) ||
+        spot.address.toLowerCase().includes(q) ||
+        spot.region.toLowerCase().includes(q)
+      );
+    });
+  }, [debouncedSearch, selectedRegion]);
 
-  // 지역 필터 → 지도 중심 이동 + 모바일에서는 목록 보기 전환
+  // 지역 탭 클릭 → 지도 중심 이동 (mapCenter), 지도 뷰 유지
   const mapCenter = (REGION_CENTERS as Record<string, { lat: number; lng: number; level: number } | null>)[selectedRegion] ?? null;
 
   const handleRegionSelect = useCallback((region: string) => {
     setSelectedRegion(region);
-    if (window.innerWidth < 1024) {
-      setListView(true);
-    }
+    // 지도 이동 우선 — 목록 뷰 전환 없이 지도에서 핀 확인
+    setListView(false);
   }, []);
 
   const handlePlaceSelect = useCallback((p: Place | null) => {
@@ -1079,7 +1077,7 @@ export default function App() {
             {/* 목록 보기 — 모바일 전용 */}
             {listView && (
               <div className="lg:hidden flex-1 min-h-0 overflow-y-auto" style={{ background: '#0d0000' }}>
-                <PlaceList places={listSpots} onSelect={handleListSelect} />
+                <PlaceList places={displayedSpots} onSelect={handleListSelect} />
               </div>
             )}
 
