@@ -210,23 +210,36 @@ const MatchSchedulePanel = React.memo(function MatchSchedulePanel({ selectedMatc
 });
 
 // ── HOT NOW 전광판 (모바일 — 가로 마퀴) ─────────────────────────
-const HOT_SUFFIX = [
-  '응원 열기 상승중', '현재 인기 급상승', '🔥 HOT', '지금 뜨는 중', '응원 인기 최상위',
-];
+const HOT_SUFFIX = ['응원 열기 상승중', '현재 인기 급상승', '지금 뜨는 중', '응원 인기 최상위'];
+const SPONSORED_SUFFIX = ['🌟 추천 스팟', '⭐ 지금 HOT', '🔥 응원 성지'];
+
 const HotNowTicker = React.memo(function HotNowTicker({ hotSpots, onSelect }: { hotSpots: Place[]; onSelect: (place: Place) => void }) {
   if (!hotSpots.length) return null;
 
+  // 광고 스팟은 3회 반복 노출, 일반 스팟은 1회
+  const displayItems = hotSpots.flatMap(s => s.isSponsored ? [s, s, s] : [s]);
+
   const renderItems = (ariaHidden?: boolean) => (
     <span className="whitespace-nowrap px-4 flex items-stretch" aria-hidden={ariaHidden || undefined}>
-      {hotSpots.map((s, i) => (
-        <React.Fragment key={s.id}>
+      {displayItems.map((s, i) => (
+        <React.Fragment key={`${s.id}-${i}`}>
           <button
             onClick={() => onSelect(s)}
-            className="h-full flex items-center text-[11.5px] font-bold text-red-200/75 hover:text-red-300 hover:underline cursor-pointer transition-colors px-1"
+            className={`h-full flex items-center text-[11.5px] font-bold hover:underline cursor-pointer transition-colors px-1 ${
+              s.isSponsored
+                ? 'text-amber-300 hover:text-amber-200'
+                : 'text-red-200/75 hover:text-red-300'
+            }`}
           >
-            {s.name}{'  '}{HOT_SUFFIX[i % HOT_SUFFIX.length]}
+            {s.isSponsored && <span className="mr-1 text-[10px]">⭐</span>}
+            {s.name}
+            {'  '}
+            {s.isSponsored
+              ? SPONSORED_SUFFIX[Math.floor(i / (hotSpots.filter(x => x.isSponsored).length || 1)) % SPONSORED_SUFFIX.length]
+              : HOT_SUFFIX[i % HOT_SUFFIX.length]
+            }
           </button>
-          <span className="text-red-800/50 mx-3 flex items-center">·</span>
+          <span className={`mx-3 flex items-center ${s.isSponsored ? 'text-amber-700/60' : 'text-red-800/50'}`}>·</span>
         </React.Fragment>
       ))}
     </span>
@@ -946,20 +959,14 @@ export default function App() {
   // 세션 조회수 — 마커/목록 클릭 시 +1 (향후 DB 연동 시 교체)
   const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
 
-  // hotScore = 세션 viewCounts + 초기 views — 향후 goingCount/checkInCount 합산으로 확장
+  // HOT NOW 고정 명단 — 디슬로 건대(광고) 1위, 나머지 순서 고정
+  const HOT_FIXED_IDS = ['66', '38', '18', '2'];  // 디슬로 건대, 신촌 오퍼스, 호멜맥주, 리버풀펍
   const hotSpots = useMemo(() => {
-    const scored = (spots as unknown as Place[]).map(s => ({
-      ...s,
-      hotScore: (viewCounts[s.id] || 0) + ((s as any).views || 0),
-    }));
-    const hasViews = scored.some(s => s.hotScore > 0);
-    if (!hasViews) {
-      return [...(spots as unknown as Place[])]
-        .sort((a, b) => a.id.localeCompare(b.id))
-        .slice(0, 5);
-    }
-    return scored.sort((a, b) => b.hotScore - a.hotScore).slice(0, 5);
-  }, [viewCounts]);
+    const allPlaces = spots as unknown as Place[];
+    return HOT_FIXED_IDS
+      .map(id => allPlaces.find(s => s.id === id))
+      .filter((s): s is Place => s != null);
+  }, []);
 
   // ── 검색 / 지역 필터 상태 ──────────────────────────────────────
   // searchInput: 입력창 즉시 반영, debouncedSearch: 300ms 후 마커/목록 필터에 적용
