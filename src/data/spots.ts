@@ -13,7 +13,10 @@ export interface Spot {
   mapUrl: string;
   images: string[];
   hashtags: string[];
-  views?: number;        // 누적 조회수 (향후 hotScore로 확장 예정)
+  views?: number;
+  isSponsored?: boolean;   // 광고/스폰서 스팟 여부
+  priority?: number;       // 노출 우선순위 (높을수록 먼저 노출)
+  badge?: string;          // 배지 텍스트 (예: '추천 스팟', '광고')
 }
 
 export const spots: Spot[] = [
@@ -789,6 +792,37 @@ export const spots: Spot[] = [
     mapUrl: 'https://naver.me/xk1XBNVf',
     images: [],
     hashtags: ['치킨', '치맥', '멀티TV', '축구응원', '서강대'],
+    isSponsored: false,
+    priority: 0,
+  },
+  {
+    id: '65',
+    name: '펀비어킹 영등포',
+    region: '영등포',
+    address: '서울 영등포구 영중로4길 6-1',
+    lat: 37.5176212,
+    lng: 126.9074532,
+    tags: ['TV다수'],
+    mapUrl: 'https://naver.me/xgN27dUZ',
+    images: [],
+    hashtags: ['스포츠펍', '멀티TV', '맥주', '축구응원', '영등포'],
+    isSponsored: false,
+    priority: 0,
+  },
+  {
+    id: '66',
+    name: '디슬로 건대',
+    region: '건대',
+    address: '서울 광진구 동일로24길 101 지하 1층',
+    lat: 37.5342800,
+    lng: 127.0764650,
+    tags: ['빔프로젝터'],
+    mapUrl: 'https://naver.me/xoH8R0Q3',
+    images: [],
+    hashtags: ['스포츠바', '대형스크린', '맥주', '축구응원', '건대'],
+    isSponsored: true,
+    priority: 999,
+    badge: '추천 스팟',
   },
 ];
 
@@ -804,7 +838,7 @@ export const REGION_GROUPS: Record<string, string[]> = {
   중구:  ['시청', '광화문', '종로', '을지로', '동묘', '동대문', '혜화'],
   용산:  ['이태원', '용산', '숙대', '남영'],
   관악:  ['서울대입구', '사당', '이수', '노량진'],
-  기타:  ['발산', '여의도', '흑석', '노원', '성신여대', '신도림', '길동', '천호'],
+  기타:  ['발산', '여의도', '흑석', '노원', '성신여대', '신도림', '길동', '천호', '영등포', '건대'],
 };
 
 // ── 생활권별 지도 중심 좌표 · 줌 레벨 ──────────────────────────────────────

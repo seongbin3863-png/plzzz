@@ -12,6 +12,9 @@ export interface Place {
   mapUrl: string;
   images?: string[];
   hashtags?: string[];
+  isSponsored?: boolean;
+  priority?: number;
+  badge?: string;
 }
 
 export interface MapCenter {
@@ -45,6 +48,15 @@ const MARKER_SVG = encodeURIComponent(`
     <path d="M23 17 L25.5 20 L23 22.5 L20 21.5 L20 17Z" fill="#111"/>
     <path d="M13 17 L10.5 20 L13 22.5 L16 21.5 L16 17Z" fill="#111"/>
     <path d="M16 21.5 L20 21.5 L21 24 L18 24.5 L15 24Z" fill="#111"/>
+  </svg>
+`);
+
+const SPONSORED_MARKER_SVG = encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="44" height="52" viewBox="0 0 44 52">
+    <path d="M22 0C9.85 0 0 9.85 0 22c0 17.2 22 30 22 30s22-12.8 22-30C44 9.85 34.15 0 22 0z"
+      fill="#F59E0B" stroke="#FFFFFF" stroke-width="2.5"/>
+    <circle cx="22" cy="21" r="13" fill="white"/>
+    <text x="22" y="27" text-anchor="middle" fill="#92400E" font-size="16" font-weight="bold" font-family="sans-serif">★</text>
   </svg>
 `);
 
@@ -126,40 +138,40 @@ const MapViewBase: React.FC<MapViewProps> = ({ places, mapCenter, focusCoords, o
     currentInfoWindowRef.current = null;
     setSelectedPlace(null);
 
-    const imageSize = new window.kakao.maps.Size(36, 42);
-    const imageOption = { offset: new window.kakao.maps.Point(18, 42) };
-    const markerImage = new window.kakao.maps.MarkerImage(
+    const regularMarkerImage = new window.kakao.maps.MarkerImage(
       `data:image/svg+xml;charset=utf-8,${MARKER_SVG}`,
-      imageSize,
-      imageOption
+      new window.kakao.maps.Size(36, 42),
+      { offset: new window.kakao.maps.Point(18, 42) }
+    );
+    const sponsoredMarkerImage = new window.kakao.maps.MarkerImage(
+      `data:image/svg+xml;charset=utf-8,${SPONSORED_MARKER_SVG}`,
+      new window.kakao.maps.Size(44, 52),
+      { offset: new window.kakao.maps.Point(22, 52) }
     );
 
-    // 좌표가 확보된 스팟만 마커 생성 (좌표 미확보 스팟은 추후 보강)
     const locatedPlaces = places.filter((p) => p.lat != null && p.lng != null);
-
-    console.group(`[MapView] 마커 생성 분석 — 전체 ${places.length}개`);
-    console.log('좌표 확보(마커 생성):', locatedPlaces.length, '개');
-    console.log('좌표 없음(건너뜀):', places.length - locatedPlaces.length, '개');
-    locatedPlaces.forEach((p) =>
-      console.log(`  marker: ${p.name} | ${p.lat} | ${p.lng}`)
-    );
-    places.filter((p) => p.lat == null || p.lng == null).forEach((p) =>
-      console.log(`  skipped: ${p.name} | lat ${p.lat} | lng ${p.lng}`)
-    );
-    console.groupEnd();
 
     locatedPlaces.forEach((place) => {
       const position = new window.kakao.maps.LatLng(place.lat!, place.lng!);
-      const marker = new window.kakao.maps.Marker({ position, image: markerImage, clickable: true });
+      const markerImage = place.isSponsored ? sponsoredMarkerImage : regularMarkerImage;
+      const marker = new window.kakao.maps.Marker({
+        position, image: markerImage, clickable: true,
+        zIndex: place.isSponsored ? 5 : 1,
+      });
       marker.setMap(map);
       markersRef.current.push(marker);
 
       const tagsHtml = place.tags.length > 0
         ? `<span style="font-size:11px;color:#dc2626;font-weight:600;display:block;margin-bottom:8px;">📺 ${place.tags.join(' · ')}</span>`
         : '';
+      const sponsoredBadge = place.isSponsored && place.badge
+        ? `<span style="font-size:10px;background:#F59E0B;color:#78350F;font-weight:800;
+            padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:7px;">⭐ ${place.badge}</span>`
+        : '';
       const infoContent = `
         <div style="padding:10px 12px;min-width:170px;max-width:220px;
           font-family:-apple-system,sans-serif;line-height:1.5;">
+          ${sponsoredBadge}
           <strong style="font-size:14px;color:#111;display:block;margin-bottom:2px;">
             ${place.name}
           </strong>

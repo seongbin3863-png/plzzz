@@ -756,12 +756,20 @@ const PlaceList = React.memo(function PlaceList({ places, onSelect, favorites, o
         <button
           key={place.id}
           onClick={() => onSelect(place)}
-          className="w-full text-left bg-black/50 border border-white/10 rounded-2xl p-4
-            active:bg-red-950/60 active:border-red-700/50 transition-colors min-h-[76px]"
+          className={`w-full text-left rounded-2xl p-4 transition-colors min-h-[76px] ${
+            place.isSponsored
+              ? 'bg-amber-950/40 border-2 border-amber-400/60 active:bg-amber-900/50'
+              : 'bg-black/50 border border-white/10 active:bg-red-950/60 active:border-red-700/50'
+          }`}
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1.5">
+                {place.isSponsored && place.badge && (
+                  <span className="text-[9px] bg-amber-400 text-amber-900 px-2 py-0.5 rounded font-black shrink-0">
+                    ⭐ {place.badge}
+                  </span>
+                )}
                 <span className="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-bold shrink-0">
                   {place.region}
                 </span>
@@ -965,13 +973,13 @@ export default function App() {
   }, [searchInput]);
 
   // 검색어 + 생활권 필터 (지도 마커 · 목록 공용)
-  // 생활권 선택 시 해당 그룹 장소만 지도에 표시
+  // 광고 스팟은 지역 필터 무관 항상 포함, priority 내림차순으로 최상단 고정
   const displayedSpots = useMemo(() => {
     const q = debouncedSearch.toLowerCase().trim();
     const members = selectedRegion !== '전체' ? (REGION_GROUPS[selectedRegion] ?? []) : null;
 
-    return spots.filter((spot) => {
-      if (members && !members.includes(spot.region)) return false;
+    const filtered = spots.filter((spot) => {
+      if (!spot.isSponsored && members && !members.includes(spot.region)) return false;
       if (!q) return true;
       return (
         spot.name.toLowerCase().includes(q) ||
@@ -979,6 +987,8 @@ export default function App() {
         spot.region.toLowerCase().includes(q)
       );
     });
+
+    return filtered.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
   }, [debouncedSearch, selectedRegion]);
 
   // 지역 탭 클릭 → 지도 중심 이동 (mapCenter), 지도 뷰 유지
@@ -1281,7 +1291,38 @@ export default function App() {
         <div className="main-content-wrap relative z-10 flex-1 min-h-0 flex items-stretch p-0 lg:p-5 gap-0 lg:gap-4">
 
           {/* 경기 일정 패널 + HOT NOW — 데스크탑만 */}
-          <div className="hidden lg:flex flex-col gap-0 w-[185px] xl:w-[200px] shrink-0">
+          <div className="hidden lg:flex flex-col gap-2 w-[185px] xl:w-[200px] shrink-0">
+
+            {/* 광고 스팟 — 최상단 고정 */}
+            {spots.filter(s => s.isSponsored).map(s => (
+              <button
+                key={s.id}
+                onClick={() => {
+                  setMobilePlace(s as unknown as Place);
+                  if (s.lat != null && s.lng != null) setFocusCoords({ lat: s.lat, lng: s.lng });
+                }}
+                className="shrink-0 w-full text-left rounded-xl overflow-hidden border-2 border-amber-400/65 transition-all hover:border-amber-400 active:opacity-80"
+                style={{ background: 'rgba(120,53,15,0.25)' }}
+              >
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-amber-400/25"
+                  style={{ background: 'rgba(245,158,11,0.18)' }}>
+                  <span className="text-[10px] font-black text-amber-300 tracking-wide">⭐ {s.badge || '추천 스팟'}</span>
+                </div>
+                <div className="px-2.5 py-2">
+                  <p className="text-[13px] font-black text-white leading-tight">{s.name}</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>{s.region} · {s.address.slice(0, 14)}…</p>
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {s.tags.map((t, i) => (
+                      <span key={i} className="text-[9px] px-1.5 py-0.5 rounded-full"
+                        style={{ background: 'rgba(245,158,11,0.2)', color: 'rgba(253,230,138,0.9)' }}>
+                        #{t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </button>
+            ))}
+
             <div className="flex-1 min-h-0 flex flex-col">
               <MatchSchedulePanel
                 selectedMatch={selectedFixture}
