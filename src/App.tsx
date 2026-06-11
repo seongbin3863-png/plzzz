@@ -1386,7 +1386,7 @@ export default function App() {
             <div className={`flex-1 min-h-0 lg:border-x-2 lg:border-b-2 border-red-400/48
               lg:rounded-t-none overflow-hidden relative
               ${infoOpen ? 'hidden' : listView ? 'hidden lg:flex lg:flex-col' : 'flex flex-col'}`}>
-              <MapView places={displayedSpots} mapCenter={mapCenter} focusCoords={focusCoords} onPlaceSelect={handlePlaceSelect} userLocation={userLocation} />
+              <MapView places={displayedSpots} mapCenter={mapCenter} focusCoords={focusCoords} onPlaceSelect={handlePlaceSelect} userLocation={userLocation} hotSpotIds={HOT_FIXED_IDS} />
 
               {/* 지역 필터 오버레이 — 데스크탑만 */}
               <div className="hidden lg:block absolute top-2.5 left-2.5 right-2.5 pointer-events-none" style={{ zIndex: 200 }}>

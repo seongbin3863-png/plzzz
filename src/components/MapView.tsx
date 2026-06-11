@@ -29,6 +29,7 @@ interface MapViewProps {
   focusCoords?: { lat: number; lng: number } | null;
   onPlaceSelect?: (place: Place | null) => void;
   userLocation?: { lat: number; lng: number } | null;
+  hotSpotIds?: string[];
 }
 
 declare global {
@@ -60,7 +61,16 @@ const SPONSORED_MARKER_SVG = encodeURIComponent(`
   </svg>
 `);
 
-const MapViewBase: React.FC<MapViewProps> = ({ places, mapCenter, focusCoords, onPlaceSelect, userLocation }) => {
+const HOT_MARKER_SVG = encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="48" viewBox="0 0 40 48">
+    <path d="M20 0C8.95 0 0 8.95 0 20c0 15.7 20 28 20 28s20-12.3 20-28C40 8.95 31.05 0 20 0z"
+      fill="#FBBF24" stroke="#FFFFFF" stroke-width="2.5"/>
+    <circle cx="20" cy="19" r="11" fill="white"/>
+    <text x="20" y="23.5" text-anchor="middle" fill="#B45309" font-size="10" font-weight="800" font-family="sans-serif">HOT</text>
+  </svg>
+`);
+
+const MapViewBase: React.FC<MapViewProps> = ({ places, mapCenter, focusCoords, onPlaceSelect, userLocation, hotSpotIds }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const kakaoMapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -148,15 +158,21 @@ const MapViewBase: React.FC<MapViewProps> = ({ places, mapCenter, focusCoords, o
       new window.kakao.maps.Size(44, 52),
       { offset: new window.kakao.maps.Point(22, 52) }
     );
+    const hotMarkerImage = new window.kakao.maps.MarkerImage(
+      `data:image/svg+xml;charset=utf-8,${HOT_MARKER_SVG}`,
+      new window.kakao.maps.Size(40, 48),
+      { offset: new window.kakao.maps.Point(20, 48) }
+    );
 
     const locatedPlaces = places.filter((p) => p.lat != null && p.lng != null);
 
     locatedPlaces.forEach((place) => {
       const position = new window.kakao.maps.LatLng(place.lat!, place.lng!);
-      const markerImage = place.isSponsored ? sponsoredMarkerImage : regularMarkerImage;
+      const isHot = hotSpotIds?.includes(place.id) && !place.isSponsored;
+      const markerImage = place.isSponsored ? sponsoredMarkerImage : isHot ? hotMarkerImage : regularMarkerImage;
       const marker = new window.kakao.maps.Marker({
         position, image: markerImage, clickable: true,
-        zIndex: place.isSponsored ? 5 : 1,
+        zIndex: place.isSponsored ? 5 : isHot ? 4 : 1,
       });
       marker.setMap(map);
       markersRef.current.push(marker);
