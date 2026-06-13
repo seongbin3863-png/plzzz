@@ -533,12 +533,14 @@ function ReportSheet({ open, onClose }: {
     if (!name.trim() || !region.trim()) return;
     setSubmitting(true);
     try {
-      const endpoint = import.meta.env.VITE_FORMSPREE_ENDPOINT;
-      if (endpoint) {
-        await fetch(endpoint, {
+      const reportEmail = import.meta.env.VITE_REPORT_EMAIL;
+      if (reportEmail) {
+        await fetch(`https://formsubmit.co/ajax/${reportEmail}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({
+            _subject: `[응원맵 제보] ${name.trim()} (${region.trim()})`,
+            _captcha: 'false',
             업장명: name.trim(),
             지역: region.trim(),
             추천이유: reason.trim() || '(없음)',
