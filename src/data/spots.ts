@@ -14,6 +14,7 @@ export interface Spot {
   images: string[];
   hashtags: string[];
   views?: number;
+  likes?: number;          // 찜 수 시드 (실사용자 누적 기준)
   isSponsored?: boolean;   // 광고/스폰서 스팟 여부
   priority?: number;       // 노출 우선순위 (높을수록 먼저 노출)
   badge?: string;          // 배지 텍스트 (예: '추천 스팟', '광고')
@@ -43,6 +44,7 @@ export const spots: Spot[] = [
     mapUrl: 'https://naver.me/GEXhvH16',
     images: [],
     hashtags: ['스포츠펍', '멀티TV', '맥주', '축구응원', '흑석'],
+    likes: 38,
   },
   {
     id: '3',
@@ -128,6 +130,7 @@ export const spots: Spot[] = [
     images: [],
     hashtags: ['크래프트비어', '멀티TV', '대형매장', '축구응원', '강남'],
     views: 118,
+    likes: 38,
   },
   {
     id: '10',
@@ -201,6 +204,7 @@ export const spots: Spot[] = [
     images: [],
     hashtags: ['축구응원전문', '멀티TV', '맥주', '스포츠펍', '이태원'],
     views: 162,
+    likes: 49,
   },
   {
     id: '16',
@@ -237,6 +241,7 @@ export const spots: Spot[] = [
     mapUrl: 'https://naver.me/xbA5Dh1e',
     images: [],
     hashtags: ['크래프트비어', '대형스크린', '맥주', '축구응원', '노량진'],
+    likes: 44,
   },
   {
     id: '19',
@@ -310,6 +315,7 @@ export const spots: Spot[] = [
     images: [],
     hashtags: ['응원맛집', '멀티TV', '단체관람', '축구응원', '홍대'],
     views: 184,
+    likes: 57,
   },
   {
     id: '25',
@@ -347,6 +353,7 @@ export const spots: Spot[] = [
     images: [],
     hashtags: ['스포츠펍', '멀티TV', '맥주', '축구응원', '강남'],
     views: 147,
+    likes: 45,
   },
   {
     id: '28',
@@ -372,6 +379,7 @@ export const spots: Spot[] = [
     images: [],
     hashtags: ['치킨', '치맥', '멀티TV', '축구응원', '홍대'],
     views: 131,
+    likes: 40,
   },
   {
     id: '30',
@@ -478,6 +486,7 @@ export const spots: Spot[] = [
     lng: 126.9358819,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/Gipd4Lqn',
+    likes: 51,
     images: [],
     hashtags: ['스포츠펍', '대형스크린', '맥주', '축구응원', '신촌'],
   },
@@ -818,6 +827,7 @@ export const spots: Spot[] = [
     lng: 127.0705626,
     tags: ['빔프로젝터'],
     mapUrl: 'https://naver.me/xoH8R0Q3',
+    likes: 67,
     images: [],
     hashtags: ['스포츠바', '대형스크린', '맥주', '축구응원', '건대'],
     isSponsored: true,

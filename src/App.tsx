@@ -4,7 +4,7 @@ import { MapView, type Place } from './components/MapView.tsx';
 import { SearchBar } from './components/SearchBar.tsx';
 import { RegionFilter } from './components/RegionFilter.tsx';
 
-const MATCH_DATE = new Date('2026-06-12T11:00:00+09:00');
+const MATCH_DATE = new Date('2026-06-19T10:00:00+09:00');
 
 function getCountdown() {
   const diff = MATCH_DATE.getTime() - Date.now();
@@ -299,7 +299,7 @@ const HotNowPanel = React.memo(function HotNowPanel({ hotSpots, onSelect }: { ho
 // 스냅 포인트: 38vh (기본) → 65vh (근처 스팟) → 90vh (전체)
 const SNAP_VH = [38, 65, 90];
 
-const PlaceSheet = React.memo(function PlaceSheet({ place, onClose, onSelectPlace, allSpots, favorites, onToggleFavorite, onShare }: {
+const PlaceSheet = React.memo(function PlaceSheet({ place, onClose, onSelectPlace, allSpots, favorites, onToggleFavorite, onShare, getFavCount }: {
   place: Place | null;
   onClose: () => void;
   onSelectPlace: (p: Place) => void;
@@ -307,6 +307,7 @@ const PlaceSheet = React.memo(function PlaceSheet({ place, onClose, onSelectPlac
   favorites: Set<string>;
   onToggleFavorite: (id: string) => void;
   onShare: (place: Place) => void;
+  getFavCount: (id: string) => number;
 }) {
   const [snapIdx, setSnapIdx] = React.useState(0);
   const [dragOffset, setDragOffset] = React.useState(0);
@@ -414,7 +415,11 @@ const PlaceSheet = React.memo(function PlaceSheet({ place, onClose, onSelectPlac
                       ? 'bg-red-500/20 border-red-500/40 text-red-400'
                       : 'bg-white/6 border-white/12 text-white/55'}`}
                 >
-                  {favorites.has(place.id) ? '❤️ 찜됨' : '🤍 찜하기'}
+                  {favorites.has(place.id) ? '❤️' : '🤍'}
+                  <span>{favorites.has(place.id) ? '찜됨' : '찜하기'}</span>
+                  <span className={`tabular-nums font-black text-[14px] ${favorites.has(place.id) ? 'text-red-400' : 'text-white/30'}`}>
+                    {getFavCount(place.id)}
+                  </span>
                 </button>
                 <button
                   onClick={() => onShare(place)}
@@ -642,8 +647,9 @@ function ReportSheet({ open, onClose }: {
 }
 
 // ── MobileInfoPanel (정보 탭) ────────────────────────────────────
-const KOREA_MATCHES = FIXTURES.filter(f => f.featured);
-const OTHER_MATCHES = FIXTURES.filter(f => !f.featured).slice(0, 4);
+function isUpcoming(f: Fixture) {
+  return new Date(`${f.date}T${f.time}:00+09:00`) >= new Date();
+}
 
 const MobileInfoPanel = React.memo(function MobileInfoPanel({
   favorites,
@@ -703,37 +709,44 @@ const MobileInfoPanel = React.memo(function MobileInfoPanel({
         )}
       </section>
 
-      {/* 📅 경기 일정 */}
+      {/* 📅 경기 일정 — 지난 경기 자동 제거 */}
       <section className="px-4 pt-5 pb-5 border-b border-white/8">
         <h3 className="text-[13px] font-black text-white tracking-wide mb-3">📅 경기 일정</h3>
-
-        {/* 한국 경기 강조 */}
-        {KOREA_MATCHES.map((f, i) => (
-          <div key={i} className="rounded-2xl px-4 py-3.5 bg-red-950/55 border border-red-500/35 mb-2.5">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-black text-red-400 tracking-wider">🇰🇷 KOREA MATCH</span>
-              <span className="text-[10px] text-white/35 font-mono">{fmtDate(f.date)} {f.time} KST</span>
-            </div>
-            <p className="text-[16px] font-black text-white">
-              {flagEmoji(f.homeFlag)} {f.home} <span className="text-white/30 font-normal text-[14px]">vs</span> {f.away} {flagEmoji(f.awayFlag)}
-            </p>
-          </div>
-        ))}
-
-        {/* 기타 경기 */}
-        <div className="flex flex-col gap-2">
-          {OTHER_MATCHES.map((f, i) => (
-            <div key={i} className="rounded-xl px-4 py-2.5 bg-white/4 border border-white/8">
-              <div className="flex items-center justify-between">
-                <p className="text-[13px] font-semibold text-white/65">
-                  {flagEmoji(f.homeFlag)} {f.home} <span className="text-white/25">vs</span> {f.away} {flagEmoji(f.awayFlag)}
-                </p>
-                <span className="text-[10px] text-white/30 font-mono shrink-0 ml-2">{f.time}</span>
+        {(() => {
+          const koreaMatches = FIXTURES.filter(f => f.featured && isUpcoming(f));
+          const otherMatches = FIXTURES.filter(f => !f.featured && isUpcoming(f)).slice(0, 4);
+          return (
+            <>
+              {koreaMatches.map((f, i) => (
+                <div key={i} className="rounded-2xl px-4 py-3.5 bg-red-950/55 border border-red-500/35 mb-2.5">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-black text-red-400 tracking-wider">🇰🇷 KOREA MATCH</span>
+                    <span className="text-[10px] text-white/35 font-mono">{fmtDate(f.date)} {f.time} KST</span>
+                  </div>
+                  <p className="text-[16px] font-black text-white">
+                    {flagEmoji(f.homeFlag)} {f.home} <span className="text-white/30 font-normal text-[14px]">vs</span> {f.away} {flagEmoji(f.awayFlag)}
+                  </p>
+                </div>
+              ))}
+              {koreaMatches.length === 0 && (
+                <p className="text-[12px] text-white/30 mb-3">예정된 한국 경기가 없습니다</p>
+              )}
+              <div className="flex flex-col gap-2">
+                {otherMatches.map((f, i) => (
+                  <div key={i} className="rounded-xl px-4 py-2.5 bg-white/4 border border-white/8">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[13px] font-semibold text-white/65">
+                        {flagEmoji(f.homeFlag)} {f.home} <span className="text-white/25">vs</span> {f.away} {flagEmoji(f.awayFlag)}
+                      </p>
+                      <span className="text-[10px] text-white/30 font-mono shrink-0 ml-2">{f.time}</span>
+                    </div>
+                    <p className="text-[10px] text-white/25 mt-0.5">{fmtDate(f.date)}</p>
+                  </div>
+                ))}
               </div>
-              <p className="text-[10px] text-white/25 mt-0.5">{fmtDate(f.date)}</p>
-            </div>
-          ))}
-        </div>
+            </>
+          );
+        })()}
       </section>
 
       {/* 📍 스팟 제보 */}
@@ -755,13 +768,23 @@ const MobileInfoPanel = React.memo(function MobileInfoPanel({
 });
 
 // ── PlaceList (목록 보기 — 모바일 전용) ──────────────────────────
-const PlaceList = React.memo(function PlaceList({ places, onSelect, favorites, onToggleFavorite, onShare }: {
+const PlaceList = React.memo(function PlaceList({ places, onSelect, favorites, onToggleFavorite, onShare, getFavCount }: {
   places: Place[];
   onSelect: (place: Place) => void;
   favorites: Set<string>;
   onToggleFavorite: (id: string) => void;
   onShare: (place: Place) => void;
+  getFavCount: (id: string) => number;
 }) {
+  const [sortBy, setSortBy] = React.useState<'default' | 'popular' | 'latest'>('default');
+
+  const sorted = React.useMemo(() => {
+    const arr = [...places];
+    if (sortBy === 'popular') return arr.sort((a, b) => getFavCount(b.id) - getFavCount(a.id));
+    if (sortBy === 'latest')  return arr.sort((a, b) => parseInt(b.id) - parseInt(a.id));
+    return arr;
+  }, [places, sortBy, getFavCount]);
+
   if (places.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-white/35">
@@ -772,10 +795,23 @@ const PlaceList = React.memo(function PlaceList({ places, onSelect, favorites, o
   }
   return (
     <div className="px-3 pt-2 pb-4 flex flex-col gap-2">
-      <p className="text-[11px] text-white/40 font-bold tracking-wider uppercase px-1 mb-1">
-        {places.length}개 장소
-      </p>
-      {places.map((place) => (
+      {/* 정렬 탭 */}
+      <div className="flex items-center justify-between px-1 mb-1">
+        <p className="text-[11px] text-white/40 font-bold tracking-wider uppercase">{places.length}개 장소</p>
+        <div className="flex gap-1">
+          {(['default', 'popular', 'latest'] as const).map(s => (
+            <button key={s} onClick={() => setSortBy(s)}
+              className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-colors ${
+                sortBy === s ? 'bg-red-600 text-white' : 'bg-white/8 text-white/45 active:bg-white/15'
+              }`}
+            >
+              {s === 'default' ? '기본' : s === 'popular' ? '❤️ 인기' : '최신'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {sorted.map((place) => (
         <button
           key={place.id}
           onClick={() => onSelect(place)}
@@ -800,17 +836,20 @@ const PlaceList = React.memo(function PlaceList({ places, onSelect, favorites, o
               <p className="text-[16px] font-black text-white leading-tight truncate">{place.name}</p>
               <p className="text-[12px] text-white/45 mt-0.5 truncate">{place.address}</p>
             </div>
-            <div className="flex flex-col items-center gap-0.5 shrink-0">
+            <div className="flex flex-col items-center gap-1 shrink-0">
               <button
                 onClick={(e) => { e.stopPropagation(); onToggleFavorite(place.id); }}
-                className="w-9 h-9 flex items-center justify-center text-[18px] rounded-full active:bg-white/10 transition-colors"
+                className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl active:bg-white/10 transition-colors min-w-[36px]"
                 aria-label="찜하기"
               >
-                {favorites.has(place.id) ? '❤️' : '🤍'}
+                <span className="text-[17px] leading-none">{favorites.has(place.id) ? '❤️' : '🤍'}</span>
+                <span className={`text-[10px] font-bold tabular-nums leading-none ${favorites.has(place.id) ? 'text-red-400' : 'text-white/35'}`}>
+                  {getFavCount(place.id)}
+                </span>
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onShare(place); }}
-                className="w-9 h-9 flex items-center justify-center text-[14px] rounded-full active:bg-white/10 transition-colors"
+                className="w-8 h-8 flex items-center justify-center text-[14px] rounded-full active:bg-white/10 transition-colors"
                 aria-label="공유하기"
               >
                 🔗
@@ -953,6 +992,13 @@ export default function App() {
       return next;
     });
   }, []);
+
+  // 찜 수 — 시드(likes) + 현재 사용자의 찜 여부 (+1)
+  const getFavCount = useCallback((id: string) => {
+    const spot = (spots as any[]).find(s => s.id === id);
+    const seed = spot?.likes ?? Math.floor((spot?.views || 0) * 0.31);
+    return seed + (favorites.has(id) ? 1 : 0);
+  }, [favorites]);
 
   // 공유
   const shareSpot = useCallback(async (place: Place) => {
@@ -1211,9 +1257,9 @@ export default function App() {
                 style={{ background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(255,255,255,0.24)' }}
               >
                 <p className="text-[13px] font-bold text-white leading-tight">
-                  🇰🇷 대한민국 <span className="text-red-200/50 font-normal">vs</span> 체코
+                  🇰🇷 대한민국 <span className="text-red-200/50 font-normal">vs</span> 멕시코 🇲🇽
                 </p>
-                <p className="text-[11px] text-red-100/50 leading-tight mt-0.5 mb-1">6월 12일 오전 11시</p>
+                <p className="text-[11px] text-red-100/50 leading-tight mt-0.5 mb-1">6월 19일 오전 10시</p>
                 <p className="text-[21px] font-black text-yellow-300 leading-none tabular-nums">D-{countdown.days}</p>
                 <p className="text-[14px] font-bold text-white leading-tight tabular-nums mt-0.5">
                   {pad(countdown.hours)}:{pad(countdown.minutes)}:{pad(countdown.seconds)}{' '}
@@ -1225,7 +1271,7 @@ export default function App() {
                 className="countdown-widget shrink-0 rounded-xl px-4 py-2 min-w-[170px]"
                 style={{ background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(255,255,255,0.24)' }}
               >
-                <p className="text-[13px] font-bold text-white">🇰🇷 대한민국 vs 체코</p>
+                <p className="text-[13px] font-bold text-white">🇰🇷 대한민국 vs 멕시코 🇲🇽</p>
                 <p className="text-[13px] font-bold text-yellow-300 animate-pulse mt-1">경기 진행 중 또는 종료</p>
               </div>
             )}
@@ -1444,6 +1490,7 @@ export default function App() {
                   favorites={favorites}
                   onToggleFavorite={toggleFavorite}
                   onShare={shareSpot}
+                  getFavCount={getFavCount}
                 />
               </div>
             )}
@@ -1474,6 +1521,7 @@ export default function App() {
         favorites={favorites}
         onToggleFavorite={toggleFavorite}
         onShare={shareSpot}
+        getFavCount={getFavCount}
       />
 
       {/* 모바일 하단 탭 바 */}
