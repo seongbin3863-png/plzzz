@@ -209,11 +209,15 @@ const MatchSchedulePanel = React.memo(function MatchSchedulePanel({ selectedMatc
   );
 });
 
-// ── 추천 응원 스팟 티커 (모바일 — 3초 순환) ─────────────────────
-const SponsoredTicker = React.memo(function SponsoredTicker({
+// ── 추천 응원 스팟 순환 배너 (헤더 아래 — 모바일+PC, 3초 교체) ──
+const RotatingSponsoredBanner = React.memo(function RotatingSponsoredBanner({
+  getFavCount,
   onSelect,
-}: { onSelect: (place: Place) => void }) {
-  // isSponsored 스팟을 priority 가중치로 순환 배열 생성
+}: {
+  getFavCount: (id: string) => number;
+  onSelect: (place: Place) => void;
+}) {
+  // isSponsored 스팟을 priority 가중 순환 배열로 빌드
   const sequence = React.useMemo(() => {
     const sponsored = (spots as unknown as Place[])
       .filter(s => s.isSponsored)
@@ -221,7 +225,6 @@ const SponsoredTicker = React.memo(function SponsoredTicker({
     if (!sponsored.length) return [];
     const minP = sponsored[sponsored.length - 1]?.priority ?? 0;
     const maxW = (sponsored[0]?.priority ?? 0) - minP + 1;
-    // 라운드-로빈: 높은 priority 스팟이 더 자주 등장
     const result: Place[] = [];
     for (let round = 0; round < maxW; round++) {
       sponsored.forEach(s => {
@@ -249,29 +252,37 @@ const SponsoredTicker = React.memo(function SponsoredTicker({
   }, [sequence.length]);
 
   if (!sequence.length) return null;
-  const spot = sequence[idx];
+  const s = sequence[idx];
 
   return (
     <div
-      className="overflow-hidden flex items-center justify-center border-b border-amber-500/20"
-      style={{ height: '34px', background: 'rgba(0,0,0,0.80)' }}
+      className="shrink-0 flex items-center gap-3 px-4 border-b border-amber-500/20 cursor-pointer active:opacity-75"
+      style={{
+        background: 'linear-gradient(90deg, rgba(120,53,15,0.55) 0%, rgba(0,0,0,0.75) 100%)',
+        minHeight: '44px',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(-5px)',
+        transition: 'opacity 0.26s ease, transform 0.26s ease',
+      }}
+      onClick={() => onSelect(s)}
     >
-      <button
-        onClick={() => onSelect(spot)}
-        className="flex items-center gap-2 h-full px-4 w-full justify-center active:opacity-60 select-none"
-        style={{
-          opacity: visible ? 1 : 0,
-          transform: visible ? 'translateY(0px)' : 'translateY(-6px)',
-          transition: 'opacity 0.26s ease, transform 0.26s ease',
-        }}
+      <span className="text-[9px] font-black text-amber-300 tracking-widest shrink-0 bg-amber-400/15 border border-amber-400/40 rounded px-1.5 py-0.5 uppercase">
+        ⭐ {s.badge || '추천 응원 스팟'}
+      </span>
+      <div className="flex-1 min-w-0">
+        <span className="text-[13px] font-black text-white mr-2">{s.name}</span>
+        <span className="text-[11px] text-amber-200/60">{s.tags[0]}</span>
+      </div>
+      <span className="text-[11px] text-red-300/70 shrink-0">❤️ {getFavCount(s.id)}</span>
+      <a
+        href={s.mapUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="shrink-0 text-[10px] font-bold text-amber-300 bg-amber-400/15 border border-amber-400/40 rounded-lg px-2.5 py-1.5"
+        onClick={e => e.stopPropagation()}
       >
-        <span className="text-[10px] font-black text-amber-400 tracking-[0.1em] shrink-0">
-          ⭐ 추천 응원 스팟
-        </span>
-        <span className="text-amber-600/40 shrink-0 text-[12px]">|</span>
-        <span className="text-[12.5px] font-black text-white truncate">{spot.name}</span>
-        <span className="text-[11px] text-amber-300/50 shrink-0">›</span>
-      </button>
+        지도 보기
+      </a>
     </div>
   );
 });
@@ -1300,39 +1311,17 @@ export default function App() {
         </div>
       </header>
 
-      {/* ⭐ 추천 응원 스팟 배너 — 모바일 + PC */}
-      {spots.filter(s => s.isSponsored && (s.priority ?? 0) >= 997 && (s.priority ?? 0) < 999).map(s => (
-        <div key={s.id}
-          className="shrink-0 flex items-center gap-3 px-4 py-2.5 border-b border-amber-500/20"
-          style={{ background: 'linear-gradient(90deg, rgba(120,53,15,0.55) 0%, rgba(0,0,0,0.75) 100%)' }}
-        >
-          <span className="text-[9px] font-black text-amber-300 tracking-widest shrink-0 bg-amber-400/15 border border-amber-400/40 rounded px-1.5 py-0.5 uppercase">
-            ⭐ {s.badge}
-          </span>
-          <div className="flex-1 min-w-0">
-            <span className="text-[13px] font-black text-white mr-2">{s.name}</span>
-            <span className="text-[11px] text-amber-200/60">{s.tags[0]}</span>
-          </div>
-          <span className="text-[11px] text-red-300/70 shrink-0">❤️ {getFavCount(s.id)}</span>
-          <a href={s.mapUrl} target="_blank" rel="noopener noreferrer"
-            className="shrink-0 text-[10px] font-bold text-amber-300 bg-amber-400/15 border border-amber-400/40 rounded-lg px-2.5 py-1.5 active:opacity-70"
-            onClick={e => e.stopPropagation()}
-          >
-            지도 보기
-          </a>
-        </div>
-      ))}
-
-      {/* ⭐ 추천 응원 스팟 티커 — 모바일 전용 (헤더↔검색창 사이) */}
-      <div className="lg:hidden shrink-0 hot-ticker-wrap">
-        <SponsoredTicker onSelect={(place) => {
+      {/* ⭐ 추천 응원 스팟 배너 — 모바일 + PC, 3초 순환 */}
+      <RotatingSponsoredBanner
+        getFavCount={getFavCount}
+        onSelect={(place) => {
           setMobilePlace(place);
           setListView(false);
           if (place.lat != null && place.lng != null) {
             setFocusCoords({ lat: place.lat, lng: place.lng });
           }
-        }} />
-      </div>
+        }}
+      />
 
       {/* ═══ 모바일 전용: 검색창 + 목록보기 + 지역 필터 바 ═══ */}
       <div className="lg:hidden shrink-0 bg-[#0d0000] border-b border-white/8">
