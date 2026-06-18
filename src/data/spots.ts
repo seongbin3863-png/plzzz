@@ -1020,6 +1020,9 @@ export const spots: Spot[] = [
     likes: 8,
     images: [],
     hashtags: ['스포츠펍', '멀티TV', '맥주', '축구응원', '용산'],
+    isSponsored: true,
+    priority: 997,
+    badge: '추천 응원 스팟',
   },
   {
     id: '77',
