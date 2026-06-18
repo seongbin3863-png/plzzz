@@ -1016,7 +1016,7 @@ export default function App() {
   const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
 
   // HOT NOW 고정 명단 — 디슬로 건대(광고) 1위, 나머지 순서 고정
-  const HOT_FIXED_IDS = ['66', '38', '18', '2'];  // 디슬로 건대, 신촌 오퍼스, 호멜맥주, 리버풀펍
+  const HOT_FIXED_IDS = ['87', '66', '38', '18', '2'];  // 이유없는한잔, 디슬로 건대, 신촌 오퍼스, 호멜맥주, 리버풀펍
   const hotSpots = useMemo(() => {
     const allPlaces = spots as unknown as Place[];
     return HOT_FIXED_IDS
@@ -1292,6 +1292,29 @@ export default function App() {
 
         </div>
       </header>
+
+      {/* ⭐ 추천 응원 스팟 배너 — 모바일 + PC */}
+      {spots.filter(s => s.isSponsored && s.priority === 998).map(s => (
+        <div key={s.id}
+          className="shrink-0 flex items-center gap-3 px-4 py-2.5 border-b border-amber-500/20"
+          style={{ background: 'linear-gradient(90deg, rgba(120,53,15,0.55) 0%, rgba(0,0,0,0.75) 100%)' }}
+        >
+          <span className="text-[9px] font-black text-amber-300 tracking-widest shrink-0 bg-amber-400/15 border border-amber-400/40 rounded px-1.5 py-0.5 uppercase">
+            ⭐ {s.badge}
+          </span>
+          <div className="flex-1 min-w-0">
+            <span className="text-[13px] font-black text-white mr-2">{s.name}</span>
+            <span className="text-[11px] text-amber-200/60">{s.tags[0]}</span>
+          </div>
+          <span className="text-[11px] text-red-300/70 shrink-0">❤️ {getFavCount(s.id)}</span>
+          <a href={s.mapUrl} target="_blank" rel="noopener noreferrer"
+            className="shrink-0 text-[10px] font-bold text-amber-300 bg-amber-400/15 border border-amber-400/40 rounded-lg px-2.5 py-1.5 active:opacity-70"
+            onClick={e => e.stopPropagation()}
+          >
+            지도 보기
+          </a>
+        </div>
+      ))}
 
       {/* 🔥 HOT NOW 전광판 — 모바일 전용 (헤더↔검색창 사이) */}
       <div className="lg:hidden shrink-0 hot-ticker-wrap">
