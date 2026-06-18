@@ -210,6 +210,10 @@ const MatchSchedulePanel = React.memo(function MatchSchedulePanel({ selectedMatc
 });
 
 // ── 추천 응원 스팟 순환 배너 (헤더 아래 — 모바일+PC, 3초 교체) ──
+// 헤더에 노출할 스팟 ID 목록 (순서대로 번갈아 표시)
+const HEADER_BANNER_IDS = ['66', '76', '87', '38', '34', '18'];
+// 디슬로 건대, 비기스, 이유없는 한잔, 신촌 오퍼스, 신촌 낭만오지, 호멜맥주
+
 const RotatingSponsoredBanner = React.memo(function RotatingSponsoredBanner({
   getFavCount,
   onSelect,
@@ -217,22 +221,12 @@ const RotatingSponsoredBanner = React.memo(function RotatingSponsoredBanner({
   getFavCount: (id: string) => number;
   onSelect: (place: Place) => void;
 }) {
-  // isSponsored 스팟을 priority 가중 순환 배열로 빌드
+  // HEADER_BANNER_IDS 순서대로 균등 순환
   const sequence = React.useMemo(() => {
-    const sponsored = (spots as unknown as Place[])
-      .filter(s => s.isSponsored)
-      .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
-    if (!sponsored.length) return [];
-    const minP = sponsored[sponsored.length - 1]?.priority ?? 0;
-    const maxW = (sponsored[0]?.priority ?? 0) - minP + 1;
-    const result: Place[] = [];
-    for (let round = 0; round < maxW; round++) {
-      sponsored.forEach(s => {
-        const w = Math.max(1, (s.priority ?? 0) - minP + 1);
-        if (round < w) result.push(s);
-      });
-    }
-    return result;
+    const allPlaces = spots as unknown as Place[];
+    return HEADER_BANNER_IDS
+      .map(id => allPlaces.find(s => s.id === id))
+      .filter((s): s is Place => s != null);
   }, []);
 
   const [idx, setIdx] = React.useState(0);
