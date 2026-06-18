@@ -209,66 +209,69 @@ const MatchSchedulePanel = React.memo(function MatchSchedulePanel({ selectedMatc
   );
 });
 
-// ── HOT NOW 전광판 (모바일 — 가로 마퀴) ─────────────────────────
-const HOT_SUFFIX = ['응원 열기 상승중', '현재 인기 급상승', '지금 뜨는 중', '응원 인기 최상위'];
-const SPONSORED_SUFFIX = ['🌟 추천 스팟', '⭐ 지금 HOT', '🔥 응원 성지'];
+// ── 추천 응원 스팟 티커 (모바일 — 3초 순환) ─────────────────────
+const SponsoredTicker = React.memo(function SponsoredTicker({
+  onSelect,
+}: { onSelect: (place: Place) => void }) {
+  // isSponsored 스팟을 priority 가중치로 순환 배열 생성
+  const sequence = React.useMemo(() => {
+    const sponsored = (spots as unknown as Place[])
+      .filter(s => s.isSponsored)
+      .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+    if (!sponsored.length) return [];
+    const minP = sponsored[sponsored.length - 1]?.priority ?? 0;
+    const maxW = (sponsored[0]?.priority ?? 0) - minP + 1;
+    // 라운드-로빈: 높은 priority 스팟이 더 자주 등장
+    const result: Place[] = [];
+    for (let round = 0; round < maxW; round++) {
+      sponsored.forEach(s => {
+        const w = Math.max(1, (s.priority ?? 0) - minP + 1);
+        if (round < w) result.push(s);
+      });
+    }
+    return result;
+  }, []);
 
-const HotNowTicker = React.memo(function HotNowTicker({ hotSpots, onSelect }: { hotSpots: Place[]; onSelect: (place: Place) => void }) {
-  if (!hotSpots.length) return null;
+  const [idx, setIdx] = React.useState(0);
+  const [visible, setVisible] = React.useState(true);
 
-  // 광고/일반 비율에 따라 최적 배치
-  const sponsored = hotSpots.filter(s => s.isSponsored);
-  const regular = hotSpots.filter(s => !s.isSponsored);
-  const displayItems: Place[] = [];
-  if (regular.length === 0 || sponsored.length >= regular.length) {
-    // sponsored가 많거나 regular 없음 → 전체 순서대로 표시
-    displayItems.push(...hotSpots);
-  } else {
-    // regular 사이에 sponsored 분산
-    regular.forEach((s, i) => {
-      displayItems.push(sponsored[i % sponsored.length]);
-      displayItems.push(s);
-    });
-  }
+  React.useEffect(() => {
+    if (sequence.length <= 1) return;
+    let tid: ReturnType<typeof setTimeout>;
+    const iid = setInterval(() => {
+      setVisible(false);
+      tid = setTimeout(() => {
+        setIdx(i => (i + 1) % sequence.length);
+        setVisible(true);
+      }, 280);
+    }, 3000);
+    return () => { clearInterval(iid); clearTimeout(tid); };
+  }, [sequence.length]);
 
-  const renderItems = (ariaHidden?: boolean) => (
-    <span className="whitespace-nowrap px-4 flex items-stretch" aria-hidden={ariaHidden || undefined}>
-      {displayItems.map((s, i) => (
-        <React.Fragment key={`${s.id}-${i}`}>
-          <button
-            onClick={() => onSelect(s)}
-            className={`h-full flex items-center text-[11.5px] font-bold hover:underline cursor-pointer transition-colors px-1 ${
-              s.isSponsored
-                ? 'text-amber-300 hover:text-amber-200'
-                : 'text-red-200/75 hover:text-red-300'
-            }`}
-          >
-            {s.isSponsored && <span className="mr-1 text-[10px]">⭐</span>}
-            {s.name}
-            {'  '}
-            {s.isSponsored
-              ? SPONSORED_SUFFIX[Math.floor(i / (hotSpots.filter(x => x.isSponsored).length || 1)) % SPONSORED_SUFFIX.length]
-              : HOT_SUFFIX[i % HOT_SUFFIX.length]
-            }
-          </button>
-          <span className={`mx-3 flex items-center ${s.isSponsored ? 'text-amber-700/60' : 'text-red-800/50'}`}>·</span>
-        </React.Fragment>
-      ))}
-    </span>
-  );
+  if (!sequence.length) return null;
+  const spot = sequence[idx];
 
   return (
-    <div className="overflow-hidden flex items-stretch bg-black/75 border-b border-red-900/50"
-      style={{ height: '34px' }}>
-      <span className="shrink-0 px-2.5 text-[11px] font-black text-red-500 tracking-widest border-r border-red-800/50 flex items-center">
-        🔥 HOT
-      </span>
-      <div className="flex-1 overflow-hidden relative flex items-center">
-        <div className="hot-ticker-track h-full">
-          {renderItems()}
-          {renderItems(true)}
-        </div>
-      </div>
+    <div
+      className="overflow-hidden flex items-center justify-center border-b border-amber-500/20"
+      style={{ height: '34px', background: 'rgba(0,0,0,0.80)' }}
+    >
+      <button
+        onClick={() => onSelect(spot)}
+        className="flex items-center gap-2 h-full px-4 w-full justify-center active:opacity-60 select-none"
+        style={{
+          opacity: visible ? 1 : 0,
+          transform: visible ? 'translateY(0px)' : 'translateY(-6px)',
+          transition: 'opacity 0.26s ease, transform 0.26s ease',
+        }}
+      >
+        <span className="text-[10px] font-black text-amber-400 tracking-[0.1em] shrink-0">
+          ⭐ 추천 응원 스팟
+        </span>
+        <span className="text-amber-600/40 shrink-0 text-[12px]">|</span>
+        <span className="text-[12.5px] font-black text-white truncate">{spot.name}</span>
+        <span className="text-[11px] text-amber-300/50 shrink-0">›</span>
+      </button>
     </div>
   );
 });
@@ -1320,9 +1323,9 @@ export default function App() {
         </div>
       ))}
 
-      {/* 🔥 HOT NOW 전광판 — 모바일 전용 (헤더↔검색창 사이) */}
+      {/* ⭐ 추천 응원 스팟 티커 — 모바일 전용 (헤더↔검색창 사이) */}
       <div className="lg:hidden shrink-0 hot-ticker-wrap">
-        <HotNowTicker hotSpots={hotSpots} onSelect={(place) => {
+        <SponsoredTicker onSelect={(place) => {
           setMobilePlace(place);
           setListView(false);
           if (place.lat != null && place.lng != null) {
