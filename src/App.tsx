@@ -89,10 +89,11 @@ const FIXTURES: Fixture[] = [
   { date:"2026-06-20",time:"07:00",home:"스코틀랜드",away:"모로코",homeFlag:"sc",awayFlag:"ma" },
   { date:"2026-06-20",time:"09:30",home:"브라질",away:"아이티",homeFlag:"br",awayFlag:"ht" },
   { date:"2026-06-20",time:"12:00",home:"튀르키예",away:"파라과이",homeFlag:"tr",awayFlag:"py" },
-  { date:"2026-06-21",time:"02:00",home:"네덜란드",away:"스페인",homeFlag:"nl",awayFlag:"es" },
+  { date:"2026-06-21",time:"02:00",home:"네덜란드",away:"스웨덴",homeFlag:"nl",awayFlag:"se" },
   { date:"2026-06-21",time:"05:00",home:"독일",away:"코트디부아르",homeFlag:"de",awayFlag:"ci" },
   { date:"2026-06-21",time:"09:00",home:"에콰도르",away:"퀴라소",homeFlag:"ec",awayFlag:"cw" },
   { date:"2026-06-21",time:"13:00",home:"튀니지",away:"일본",homeFlag:"tn",awayFlag:"jp" },
+  { date:"2026-06-25",time:"10:00",home:"대한민국",away:"남아프리카공화국",homeFlag:"kr",awayFlag:"za",featured:true },
 ];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
