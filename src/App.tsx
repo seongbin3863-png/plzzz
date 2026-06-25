@@ -4,17 +4,6 @@ import { MapView, type Place } from './components/MapView.tsx';
 import { SearchBar } from './components/SearchBar.tsx';
 import { RegionFilter } from './components/RegionFilter.tsx';
 
-const MATCH_DATE = new Date('2026-06-25T10:00:00+09:00');
-
-function getCountdown() {
-  const diff = MATCH_DATE.getTime() - Date.now();
-  if (diff <= 0) return null;
-  const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-  return { days, hours, minutes, seconds };
-}
 
 function TaegukSVG({ className }: { className?: string }) {
   return (
@@ -975,7 +964,6 @@ function LocationPrompt({ onAllow, onDismiss }: { onAllow: () => void; onDismiss
 }
 
 export default function App() {
-  const [countdown, setCountdown] = useState(getCountdown);
   const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
   const [mobilePlace, setMobilePlace] = useState<Place | null>(null);
   const [listView, setListView] = useState(false);
@@ -1127,11 +1115,6 @@ export default function App() {
     setViewCounts(prev => ({ ...prev, [place.id]: (prev[place.id] || 0) + 1 }));
     setMobilePlace(place);
     setListView(false);
-  }, []);
-
-  useEffect(() => {
-    const timer = setInterval(() => setCountdown(getCountdown()), 1000);
-    return () => clearInterval(timer);
   }, []);
 
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -1300,30 +1283,6 @@ export default function App() {
               </p>
             </div>
 
-            {countdown ? (
-              <div
-                className="countdown-widget shrink-0 rounded-xl px-4 py-2 min-w-[170px] backdrop-blur-sm"
-                style={{ background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(255,255,255,0.24)' }}
-              >
-                <p className="text-[13px] font-bold text-white leading-tight">
-                  🇰🇷 대한민국 <span className="text-red-200/50 font-normal">vs</span> 남아공 🇿🇦
-                </p>
-                <p className="text-[11px] text-red-100/50 leading-tight mt-0.5 mb-1">6월 25일 오전 10시</p>
-                <p className="text-[21px] font-black text-yellow-300 leading-none tabular-nums">D-{countdown.days}</p>
-                <p className="text-[14px] font-bold text-white leading-tight tabular-nums mt-0.5">
-                  {pad(countdown.hours)}:{pad(countdown.minutes)}:{pad(countdown.seconds)}{' '}
-                  <span className="text-red-100/50 font-normal text-[11px]">남음</span>
-                </p>
-              </div>
-            ) : (
-              <div
-                className="countdown-widget shrink-0 rounded-xl px-4 py-2 min-w-[170px]"
-                style={{ background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(255,255,255,0.24)' }}
-              >
-                <p className="text-[13px] font-bold text-white">🇰🇷 대한민국 vs 남아공 🇿🇦</p>
-                <p className="text-[13px] font-bold text-yellow-300 animate-pulse mt-1">경기 진행 중 또는 종료</p>
-              </div>
-            )}
           </div>
 
           {/* 하단: 서브텍스트 */}
