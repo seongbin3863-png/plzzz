@@ -237,8 +237,8 @@ const MatchSchedulePanel = React.memo(function MatchSchedulePanel({ selectedMatc
 
 // ── 추천 응원 스팟 순환 배너 (헤더 아래 — 모바일+PC, 3초 교체) ──
 // 헤더에 노출할 스팟 ID 목록 (순서대로 번갈아 표시)
-const HEADER_BANNER_IDS = ['66', '76', '87', '38', '34', '18'];
-// 디슬로 건대, 비기스, 이유없는 한잔, 신촌 오퍼스, 신촌 낭만오지, 호멜맥주
+const HEADER_BANNER_IDS = ['103', '104', '76', '34'];
+// 진 파스타펍, 엘리펀트 키친, 비기스, 신촌 낭만오지
 
 const RotatingSponsoredBanner = React.memo(function RotatingSponsoredBanner({
   getFavCount,
