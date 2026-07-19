@@ -1377,6 +1377,9 @@ export const spots: Spot[] = [
     likes: 0,
     images: [],
     hashtags: ['파스타', '대형스크린', '치맥', '축구응원', '수원'],
+    isSponsored: true,
+    priority: 996,
+    badge: '추천 스팟',
   },
   {
     id: '104',
@@ -1390,6 +1393,9 @@ export const spots: Spot[] = [
     likes: 0,
     images: [],
     hashtags: ['수제맥주', '대형스크린', '펍', '축구응원', '서울대입구'],
+    isSponsored: true,
+    priority: 995,
+    badge: '추천 스팟',
   },
 ];
 
