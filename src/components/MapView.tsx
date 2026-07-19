@@ -55,7 +55,7 @@ const MARKER_SVG = encodeURIComponent(`
 const SPONSORED_MARKER_SVG = encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="44" height="52" viewBox="0 0 44 52">
     <path d="M22 0C9.85 0 0 9.85 0 22c0 17.2 22 30 22 30s22-12.8 22-30C44 9.85 34.15 0 22 0z"
-      fill="#F59E0B" stroke="#FFFFFF" stroke-width="2.5"/>
+      fill="#EF4444" stroke="#FFFFFF" stroke-width="2.5"/>
     <circle cx="22" cy="21" r="13" fill="white"/>
     <text x="22" y="27" text-anchor="middle" fill="#92400E" font-size="16" font-weight="bold" font-family="sans-serif">★</text>
   </svg>
@@ -64,7 +64,7 @@ const SPONSORED_MARKER_SVG = encodeURIComponent(`
 const HOT_MARKER_SVG = encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="40" height="48" viewBox="0 0 40 48">
     <path d="M20 0C8.95 0 0 8.95 0 20c0 15.7 20 28 20 28s20-12.3 20-28C40 8.95 31.05 0 20 0z"
-      fill="#FBBF24" stroke="#FFFFFF" stroke-width="2.5"/>
+      fill="#EF4444" stroke="#FFFFFF" stroke-width="2.5"/>
     <circle cx="20" cy="19" r="11" fill="white"/>
     <text x="20" y="23.5" text-anchor="middle" fill="#B45309" font-size="10" font-weight="800" font-family="sans-serif">HOT</text>
   </svg>
