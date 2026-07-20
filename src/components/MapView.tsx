@@ -52,18 +52,6 @@ const MARKER_SVG = encodeURIComponent(`
   </svg>
 `);
 
-const STAR_MARKER_SVG = encodeURIComponent(`
-  <svg xmlns="http://www.w3.org/2000/svg" width="44" height="52" viewBox="0 0 44 52">
-    <path d="M22 0C9.85 0 0 9.85 0 22c0 17.2 22 30 22 30s22-12.8 22-30C44 9.85 34.15 0 22 0z"
-      fill="#F59E0B" stroke="#FFFFFF" stroke-width="2.5"/>
-    <circle cx="22" cy="21" r="13" fill="white"/>
-    <text x="22" y="27" text-anchor="middle" fill="#92400E" font-size="16" font-weight="bold" font-family="sans-serif">★</text>
-  </svg>
-`);
-
-// 지도 핀을 별 모양·황금색으로 강조 표시할 스팟 ID (진 파스타펍, 엘리펀트 키친)
-const STAR_MARKER_IDS = ['103', '104'];
-
 const MapViewBase: React.FC<MapViewProps> = ({ places, mapCenter, focusCoords, onPlaceSelect, userLocation, hotSpotIds }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const kakaoMapRef = useRef<any>(null);
@@ -147,19 +135,12 @@ const MapViewBase: React.FC<MapViewProps> = ({ places, mapCenter, focusCoords, o
       new window.kakao.maps.Size(36, 42),
       { offset: new window.kakao.maps.Point(18, 42) }
     );
-    const starMarkerImage = new window.kakao.maps.MarkerImage(
-      `data:image/svg+xml;charset=utf-8,${STAR_MARKER_SVG}`,
-      new window.kakao.maps.Size(44, 52),
-      { offset: new window.kakao.maps.Point(22, 52) }
-    );
     const locatedPlaces = places.filter((p) => p.lat != null && p.lng != null);
 
     locatedPlaces.forEach((place) => {
       const position = new window.kakao.maps.LatLng(place.lat!, place.lng!);
-      const markerImage = STAR_MARKER_IDS.includes(place.id) ? starMarkerImage : regularMarkerImage;
       const marker = new window.kakao.maps.Marker({
-        position, image: markerImage, clickable: true,
-        zIndex: STAR_MARKER_IDS.includes(place.id) ? 5 : 1,
+        position, image: regularMarkerImage, clickable: true,
       });
       marker.setMap(map);
       markersRef.current.push(marker);
